@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-<<<<<<< HEAD
 
 type Theme = 'dark' | 'light' | 'system'
 
@@ -65,13 +64,3 @@ export function ThemeProvider({
 export function useTheme() {
   return React.useContext(ThemeContext)
 }
-=======
-import {
-  ThemeProvider as NextThemesProvider,
-  type ThemeProviderProps,
-} from 'next-themes'
-
-export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>
-}
->>>>>>> 8e65d384dde44947171ecc45644050188674abdc

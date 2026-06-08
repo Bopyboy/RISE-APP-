@@ -42,13 +42,13 @@ function getGroupAverageLevel(
   return 'elite'
 }
 
-// Premium color palette per level — richer, more saturated
-const PREMIUM_COLORS: Record<MuscleLevel, { fill: string; glow: string; gradient: [string, string]; shadow: string }> = {
-  untrained:    { fill: '#1e2028', glow: 'transparent',  gradient: ['#1e2028', '#252830'], shadow: '#00000020' },
-  beginner:     { fill: '#dc2626', glow: '#dc2626',       gradient: ['#991b1b', '#f87171'], shadow: '#dc262633' },
-  intermediate: { fill: '#ea7c18', glow: '#ea7c18',       gradient: ['#92400e', '#fbbf24'], shadow: '#ea7c1833' },
-  advanced:     { fill: '#2563eb', glow: '#2563eb',       gradient: ['#1e40af', '#60a5fa'], shadow: '#2563eb33' },
-  elite:        { fill: '#16a34a', glow: '#16a34a',       gradient: ['#15803d', '#4ade80'], shadow: '#16a34a33' },
+// Premium color palette per level
+const PREMIUM_COLORS: Record<MuscleLevel, { fill: string; glow: string; gradient: [string, string] }> = {
+  untrained:    { fill: '#1e2028', glow: 'transparent',  gradient: ['#1e2028', '#252830'] },
+  beginner:     { fill: '#dc2626', glow: '#dc2626',       gradient: ['#b91c1c', '#f87171'] },
+  intermediate: { fill: '#ea7c18', glow: '#ea7c18',       gradient: ['#c2610f', '#fbbf24'] },
+  advanced:     { fill: '#2563eb', glow: '#2563eb',       gradient: ['#1d4ed8', '#60a5fa'] },
+  elite:        { fill: '#16a34a', glow: '#16a34a',       gradient: ['#15803d', '#4ade80'] },
 }
 
 const TIER_LABELS: Record<MuscleLevel, string> = {
@@ -71,45 +71,23 @@ function MusclePath({
 }) {
   const c = PREMIUM_COLORS[level]
   return (
-    <g key={`group-${id}`}>
-      {/* Shadow layer for depth */}
-      <path
-        d={d}
-        fill={c.shadow}
-        opacity="0.6"
-        style={{
-          transform: 'translate(1.5px, 1.5px)',
-          filter: 'blur(1px)',
-        }}
-      />
-      {/* Main muscle path */}
-      <path
-        d={d}
-        fill={`url(#grad-${id})`}
-        style={{
-          filter: level !== 'untrained'
-            ? `drop-shadow(0 0 8px ${c.glow}aa) drop-shadow(0 0 3px ${c.glow}ff)`
-            : undefined,
-          opacity: level === 'untrained' ? 0.5 : 1,
-          transition: 'all 0.3s ease',
-        }}
-        className="cursor-pointer"
-        onMouseEnter={e => onHover(name, level, e)}
-        onMouseLeave={onLeave}
-        onTouchStart={e => onHover(name, level, e)}
-        onTouchEnd={onLeave}
-      />
-      {/* Highlight edge for definition */}
-      {level !== 'untrained' && (
-        <path
-          d={d}
-          fill="none"
-          stroke={`${c.fill}44`}
-          strokeWidth="0.6"
-          opacity="0.5"
-        />
-      )}
-    </g>
+    <path
+      key={id}
+      d={d}
+      fill={`url(#grad-${id})`}
+      style={{
+        filter: level !== 'untrained'
+          ? `drop-shadow(0 0 6px ${c.glow}88) drop-shadow(0 0 2px ${c.glow}cc)`
+          : undefined,
+        opacity: level === 'untrained' ? 0.45 : 1,
+        transition: 'all 0.3s ease',
+      }}
+      className="cursor-pointer"
+      onMouseEnter={e => onHover(name, level, e)}
+      onMouseLeave={onLeave}
+      onTouchStart={e => onHover(name, level, e)}
+      onTouchEnd={onLeave}
+    />
   )
 }
 
@@ -129,237 +107,144 @@ function BodySVG({ view, muscleLevels }: { view: 'front' | 'back'; muscleLevels:
     })
   }
 
-  // Front view muscles with improved anatomy
+  // Clean, modern muscle group design - front view
   const frontMuscles = [
-    // --- HEAD & NECK ---
-    { id: 'head', name: 'Head', level: muscleLevels.chest,
-      d: 'M95 20 Q85 18 80 25 Q75 35 75 50 Q75 65 85 72 Q95 75 100 75 Q105 75 115 72 Q125 65 125 50 Q125 35 120 25 Q115 18 105 20 Q100 18 95 20 Z' },
-    { id: 'neck', name: 'Neck', level: muscleLevels.shoulders,
-      d: 'M92 73 Q88 80 88 90 L112 90 Q112 80 108 73 Q100 76 92 73 Z' },
+    // CHEST - two connected pecs
+    { id: 'chest-left', name: 'Chest', level: muscleLevels.chest,
+      d: 'M65 90 Q60 95 60 110 Q62 125 70 135 Q78 138 85 133 Q85 115 82 100 Q78 92 70 90 Z' },
+    { id: 'chest-right', name: 'Chest', level: muscleLevels.chest,
+      d: 'M135 90 Q140 95 140 110 Q138 125 130 135 Q122 138 115 133 Q115 115 118 100 Q122 92 130 90 Z' },
 
-    // --- CHEST (more detailed) ---
-    { id: 'pec-left', name: 'Chest', level: muscleLevels.chest,
-      d: 'M88 92 Q78 95 72 108 Q68 125 70 145 Q75 158 88 162 Q92 155 94 138 Q95 115 96 100 L88 92 Z' },
-    { id: 'pec-right', name: 'Chest', level: muscleLevels.chest,
-      d: 'M112 92 Q122 95 128 108 Q132 125 130 145 Q125 158 112 162 Q108 155 106 138 Q105 115 104 100 L112 92 Z' },
+    // SHOULDERS - rounded deltoids
+    { id: 'shoulder-left', name: 'Shoulders', level: muscleLevels.shoulders,
+      d: 'M55 95 Q45 100 42 115 Q42 130 52 138 Q62 135 68 125 Q70 110 65 100 Z' },
+    { id: 'shoulder-right', name: 'Shoulders', level: muscleLevels.shoulders,
+      d: 'M145 95 Q155 100 158 115 Q158 130 148 138 Q138 135 132 125 Q130 110 135 100 Z' },
 
-    // --- SHOULDERS (front deltoids) ---
-    { id: 'delt-left', name: 'Shoulders', level: muscleLevels.shoulders,
-      d: 'M72 105 Q60 102 54 115 Q50 132 56 150 Q65 155 76 150 Q78 135 75 115 Z' },
-    { id: 'delt-right', name: 'Shoulders', level: muscleLevels.shoulders,
-      d: 'M128 105 Q140 102 146 115 Q150 132 144 150 Q135 155 124 150 Q122 135 125 115 Z' },
-
-    // --- UPPER CHEST / CLAVICLE ---
-    { id: 'upper-chest', name: 'Chest', level: muscleLevels.chest,
-      d: 'M85 92 L115 92 Q115 100 112 108 L100 110 L88 108 Q88 100 85 92 Z' },
-
-    // --- BICEPS (front arms) ---
+    // BICEPS - upper arm front
     { id: 'bicep-left', name: 'Arms', level: muscleLevels.arms,
-      d: 'M68 150 Q62 168 60 190 Q59 210 64 225 L76 220 Q78 198 78 175 Q77 160 72 150 Z' },
+      d: 'M48 140 Q42 160 42 180 Q44 195 52 200 Q60 195 62 175 Q62 158 58 145 Z' },
     { id: 'bicep-right', name: 'Arms', level: muscleLevels.arms,
-      d: 'M132 150 Q138 168 140 190 Q141 210 136 225 L124 220 Q122 198 122 175 Q123 160 128 150 Z' },
+      d: 'M152 140 Q158 160 158 180 Q156 195 148 200 Q140 195 138 175 Q138 158 142 145 Z' },
 
-    // --- FOREARMS ---
+    // FOREARMS
     { id: 'forearm-left', name: 'Arms', level: muscleLevels.arms,
-      d: 'M60 228 Q56 250 55 270 Q56 285 62 295 L72 290 Q73 268 72 245 Z' },
+      d: 'M42 205 Q38 225 40 245 Q44 255 52 258 Q58 252 60 235 Q60 220 55 210 Z' },
     { id: 'forearm-right', name: 'Arms', level: muscleLevels.arms,
-      d: 'M140 228 Q144 250 145 270 Q144 285 138 295 L128 290 Q127 268 128 245 Z' },
+      d: 'M158 205 Q162 225 160 245 Q156 255 148 258 Q142 252 140 235 Q140 220 145 210 Z' },
 
-    // --- ABS (realistic 6-pack) ---
-    { id: 'abs-upper-l', name: 'Core', level: muscleLevels.core,
-      d: 'M92 165 Q95 168 100 168 Q102 165 102 158 Q100 155 95 156 Q92 157 92 165 Z' },
-    { id: 'abs-upper-r', name: 'Core', level: muscleLevels.core,
-      d: 'M98 158 Q100 155 105 156 Q108 157 108 165 Q105 168 100 168 Q98 165 98 158 Z' },
-    
-    { id: 'abs-mid-l', name: 'Core', level: muscleLevels.core,
-      d: 'M92 175 Q95 178 100 178 Q102 175 102 168 Q100 165 95 166 Q92 167 92 175 Z' },
-    { id: 'abs-mid-r', name: 'Core', level: muscleLevels.core,
-      d: 'M98 168 Q100 165 105 166 Q108 167 108 175 Q105 178 100 178 Q98 175 98 168 Z' },
-    
-    { id: 'abs-lower-l', name: 'Core', level: muscleLevels.core,
-      d: 'M92 186 Q95 189 100 189 Q102 186 102 178 Q100 175 95 176 Q92 177 92 186 Z' },
-    { id: 'abs-lower-r', name: 'Core', level: muscleLevels.core,
-      d: 'M98 178 Q100 175 105 176 Q108 177 108 186 Q105 189 100 189 Q98 186 98 178 Z' },
+    // ABS - clean 6-pack grid
+    { id: 'abs-upper-left', name: 'Core', level: muscleLevels.core,
+      d: 'M92 140 Q97 142 100 140 Q103 142 108 140 L108 155 Q100 157 92 155 Z' },
+    { id: 'abs-upper-right', name: 'Core', level: muscleLevels.core,
+      d: 'M92 140 Q97 142 100 140 L100 155 Q97 157 92 155 Z' },
 
-    // --- SERRATUS (side abs) ---
-    { id: 'serratus-left', name: 'Core', level: muscleLevels.core,
-      d: 'M70 148 Q68 165 70 185 Q75 200 85 208 L82 200 Q78 185 78 168 L72 150 Z' },
-    { id: 'serratus-right', name: 'Core', level: muscleLevels.core,
-      d: 'M130 148 Q132 165 130 185 Q125 200 115 208 L118 200 Q122 185 122 168 L128 150 Z' },
+    { id: 'abs-mid-left', name: 'Core', level: muscleLevels.core,
+      d: 'M92 158 Q97 160 100 158 Q103 160 108 158 L108 173 Q100 175 92 173 Z' },
+    { id: 'abs-mid-right', name: 'Core', level: muscleLevels.core,
+      d: 'M92 158 Q97 160 100 158 L100 173 Q97 175 92 173 Z' },
 
-    // --- OBLIQUES (external) ---
-    { id: 'oblique-left', name: 'Core', level: muscleLevels.core,
-      d: 'M82 210 Q75 222 74 240 Q76 258 85 270 L95 262 Q92 245 93 228 L88 215 Z' },
-    { id: 'oblique-right', name: 'Core', level: muscleLevels.core,
-      d: 'M118 210 Q125 222 126 240 Q124 258 115 270 L105 262 Q108 245 107 228 L112 215 Z' },
+    { id: 'abs-lower-left', name: 'Core', level: muscleLevels.core,
+      d: 'M92 176 Q97 178 100 176 Q103 178 108 176 L108 191 Q100 193 92 191 Z' },
+    { id: 'abs-lower-right', name: 'Core', level: muscleLevels.core,
+      d: 'M92 176 Q97 178 100 176 L100 191 Q97 193 92 191 Z' },
 
-    // --- RECTUS ABDOMINIS (lower) ---
-    { id: 'lower-abs-l', name: 'Core', level: muscleLevels.core,
-      d: 'M92 195 Q95 198 100 198 Q102 195 102 188 Q100 185 95 186 Q92 187 92 195 Z' },
-    { id: 'lower-abs-r', name: 'Core', level: muscleLevels.core,
-      d: 'M98 188 Q100 185 105 186 Q108 187 108 195 Q105 198 100 198 Q98 195 98 188 Z' },
+    // QUADS - clean thigh muscles
+    { id: 'quad-left', name: 'Legs', level: muscleLevels.legs,
+      d: 'M68 205 Q62 235 62 270 Q65 295 78 305 L88 300 Q85 270 88 240 Q88 220 80 210 Z' },
+    { id: 'quad-right', name: 'Legs', level: muscleLevels.legs,
+      d: 'M132 205 Q138 235 138 270 Q135 295 122 305 L112 300 Q115 270 112 240 Q112 220 120 210 Z' },
 
-    // --- QUADS (more realistic 4-part) ---
-    { id: 'quad-vastus-medialis-l', name: 'Legs', level: muscleLevels.legs,
-      d: 'M95 275 Q93 305 95 340 Q97 360 105 370 L108 365 Q107 335 107 305 L100 275 Z' },
-    { id: 'quad-vastus-lateralis-l', name: 'Legs', level: muscleLevels.legs,
-      d: 'M78 280 Q72 310 72 345 Q73 365 82 375 L92 368 Q88 340 88 310 L85 280 Z' },
-    
-    { id: 'quad-vastus-medialis-r', name: 'Legs', level: muscleLevels.legs,
-      d: 'M105 275 Q107 305 105 340 Q103 360 95 370 L92 365 Q93 335 93 305 L100 275 Z' },
-    { id: 'quad-vastus-lateralis-r', name: 'Legs', level: muscleLevels.legs,
-      d: 'M122 280 Q128 310 128 345 Q127 365 118 375 L108 368 Q112 340 112 310 L115 280 Z' },
-
-    // --- VMO (teardrop) ---
-    { id: 'vmo-l', name: 'Legs', level: muscleLevels.legs,
-      d: 'M100 330 Q102 345 100 360 Q99 365 96 368 Q98 360 100 345 L100 330 Z' },
-    { id: 'vmo-r', name: 'Legs', level: muscleLevels.legs,
-      d: 'M100 330 Q98 345 100 360 Q101 365 104 368 Q102 360 100 345 L100 330 Z' },
-
-    // --- CALVES (front) ---
-    { id: 'calf-medial-l', name: 'Legs', level: muscleLevels.legs,
-      d: 'M82 375 Q78 395 78 420 Q80 445 90 455 L95 448 Q93 425 93 400 Z' },
-    { id: 'calf-lateral-l', name: 'Legs', level: muscleLevels.legs,
-      d: 'M72 378 Q68 400 70 425 Q72 448 82 458 L88 452 Q85 428 85 405 L78 380 Z' },
-    
-    { id: 'calf-medial-r', name: 'Legs', level: muscleLevels.legs,
-      d: 'M118 375 Q122 395 122 420 Q120 445 110 455 L105 448 Q107 425 107 400 Z' },
-    { id: 'calf-lateral-r', name: 'Legs', level: muscleLevels.legs,
-      d: 'M128 378 Q132 400 130 425 Q128 448 118 458 L112 452 Q115 428 115 405 L122 380 Z' },
-
-    // --- TIBIALIS (front shin) ---
-    { id: 'tibialis-l', name: 'Legs', level: muscleLevels.legs,
-      d: 'M85 378 Q84 405 85 435 Q86 452 90 460 L88 456 Q87 435 87 410 Z' },
-    { id: 'tibialis-r', name: 'Legs', level: muscleLevels.legs,
-      d: 'M115 378 Q116 405 115 435 Q114 452 110 460 L112 456 Q113 435 113 410 Z' },
+    // CALVES
+    { id: 'calf-left', name: 'Legs', level: muscleLevels.legs,
+      d: 'M65 310 Q60 335 62 360 Q66 375 75 380 L82 372 Q80 350 80 330 Z' },
+    { id: 'calf-right', name: 'Legs', level: muscleLevels.legs,
+      d: 'M135 310 Q140 335 138 360 Q134 375 125 380 L118 372 Q120 350 120 330 Z' },
   ]
 
-  // Back view muscles with improved anatomy
+  // Back view muscles
   const backMuscles = [
-    // --- HEAD ---
-    { id: 'head-back', name: 'Head', level: muscleLevels.chest,
-      d: 'M95 20 Q85 18 80 25 Q75 35 75 50 Q75 65 85 72 Q95 75 100 75 Q105 75 115 72 Q125 65 125 50 Q125 35 120 25 Q115 18 105 20 Q100 18 95 20 Z' },
-
-    // --- TRAPS (upper back) ---
+    // TRAPS - upper back
     { id: 'trap-left', name: 'Back', level: muscleLevels.back,
-      d: 'M100 75 Q85 78 75 88 Q70 98 75 115 L92 108 Q98 95 100 82 Z' },
+      d: 'M100 85 Q85 90 75 105 Q70 120 80 135 L95 125 Q98 105 100 92 Z' },
     { id: 'trap-right', name: 'Back', level: muscleLevels.back,
-      d: 'M100 75 Q115 78 125 88 Q130 98 125 115 L108 108 Q102 95 100 82 Z' },
+      d: 'M100 85 Q115 90 125 105 Q130 120 120 135 L105 125 Q102 105 100 92 Z' },
 
-    // --- REAR DELTS ---
-    { id: 'rear-delt-left', name: 'Shoulders', level: muscleLevels.shoulders,
-      d: 'M72 100 Q58 108 52 125 Q50 145 60 160 Q72 158 80 145 Q82 125 78 110 Z' },
-    { id: 'rear-delt-right', name: 'Shoulders', level: muscleLevels.shoulders,
-      d: 'M128 100 Q142 108 148 125 Q150 145 140 160 Q128 158 120 145 Q118 125 122 110 Z' },
+    // LATS - large back muscles
+    { id: 'lat-left', name: 'Back', level: muscleLevels.back,
+      d: 'M75 135 Q62 155 62 180 Q64 210 80 225 L95 215 Q92 190 95 160 Q98 140 92 135 Z' },
+    { id: 'lat-right', name: 'Back', level: muscleLevels.back,
+      d: 'M125 135 Q138 155 138 180 Q136 210 120 225 L105 215 Q108 190 105 160 Q102 140 108 135 Z' },
 
-    // --- LATS (upper & lower) ---
-    { id: 'lat-upper-left', name: 'Back', level: muscleLevels.back,
-      d: 'M78 115 Q68 135 70 160 Q74 185 85 200 L96 190 Q93 165 92 140 L85 120 Z' },
-    { id: 'lat-upper-right', name: 'Back', level: muscleLevels.back,
-      d: 'M122 115 Q132 135 130 160 Q126 185 115 200 L104 190 Q107 165 108 140 L115 120 Z' },
+    // REAR SHOULDERS
+    { id: 'rear-shoulder-left', name: 'Shoulders', level: muscleLevels.shoulders,
+      d: 'M55 100 Q42 110 40 128 Q42 145 58 150 Q70 140 75 120 Z' },
+    { id: 'rear-shoulder-right', name: 'Shoulders', level: muscleLevels.shoulders,
+      d: 'M145 100 Q158 110 160 128 Q158 145 142 150 Q130 140 125 120 Z' },
 
-    { id: 'lat-lower-left', name: 'Back', level: muscleLevels.back,
-      d: 'M70 205 Q65 230 70 255 Q78 275 90 280 L92 270 Q88 250 85 225 L75 210 Z' },
-    { id: 'lat-lower-right', name: 'Back', level: muscleLevels.back,
-      d: 'M130 205 Q135 230 130 255 Q122 275 110 280 L108 270 Q112 250 115 225 L125 210 Z' },
-
-    // --- RHOMBOIDS (mid-back) ---
-    { id: 'rhomboid-left', name: 'Back', level: muscleLevels.back,
-      d: 'M92 115 L78 125 L82 165 L96 155 Z' },
-    { id: 'rhomboid-right', name: 'Back', level: muscleLevels.back,
-      d: 'M108 115 L122 125 L118 165 L104 155 Z' },
-
-    // --- ERECTOR SPINAE (lower back) ---
-    { id: 'erector-left', name: 'Back', level: muscleLevels.back,
-      d: 'M94 160 Q92 185 92 210 Q92 230 96 248 L99 245 Q99 220 100 195 L99 165 Z' },
-    { id: 'erector-right', name: 'Back', level: muscleLevels.back,
-      d: 'M106 160 Q108 185 108 210 Q108 230 104 248 L101 245 Q101 220 100 195 L101 165 Z' },
-
-    // --- TRICEPS (back arms) ---
+    // TRICEPS - back of arms
     { id: 'tricep-left', name: 'Arms', level: muscleLevels.arms,
-      d: 'M60 120 Q52 145 52 175 Q54 205 62 225 L74 215 Q72 185 72 155 L68 125 Z' },
+      d: 'M40 155 Q32 180 32 205 Q35 230 48 240 Q58 230 62 210 Q62 180 56 160 Z' },
     { id: 'tricep-right', name: 'Arms', level: muscleLevels.arms,
-      d: 'M140 120 Q148 145 148 175 Q146 205 138 225 L126 215 Q128 185 128 155 L132 125 Z' },
+      d: 'M160 155 Q168 180 168 205 Q165 230 152 240 Q142 230 138 210 Q138 180 144 160 Z' },
 
-    // --- FOREARMS (back) ---
+    // FOREARMS - back
     { id: 'back-forearm-left', name: 'Arms', level: muscleLevels.arms,
-      d: 'M52 230 Q48 255 50 280 Q53 300 62 310 L72 302 Q70 280 70 255 Z' },
+      d: 'M32 245 Q28 268 32 290 Q38 305 50 310 Q58 302 60 285 Q58 265 52 250 Z' },
     { id: 'back-forearm-right', name: 'Arms', level: muscleLevels.arms,
-      d: 'M148 230 Q152 255 150 280 Q147 300 138 310 L128 302 Q130 280 130 255 Z' },
+      d: 'M168 245 Q172 268 168 290 Q162 305 150 310 Q142 302 140 285 Q142 265 148 250 Z' },
 
-    // --- GLUTES (buttocks) ---
+    // GLUTES
     { id: 'glute-left', name: 'Legs', level: muscleLevels.legs,
-      d: 'M80 255 Q70 270 72 290 L100 295 L100 260 Q90 255 80 255 Z' },
+      d: 'M78 230 Q68 250 70 270 L100 275 L100 235 Q90 228 78 230 Z' },
     { id: 'glute-right', name: 'Legs', level: muscleLevels.legs,
-      d: 'M120 255 Q130 270 128 290 L100 295 L100 260 Q110 255 120 255 Z' },
+      d: 'M122 230 Q132 250 130 270 L100 275 L100 235 Q110 228 122 230 Z' },
 
-    // --- HAMSTRINGS ---
-    { id: 'ham-medial-l', name: 'Legs', level: muscleLevels.legs,
-      d: 'M92 298 Q90 330 92 360 Q95 380 105 390 L102 385 Q100 360 100 330 Z' },
-    { id: 'ham-lateral-l', name: 'Legs', level: muscleLevels.legs,
-      d: 'M72 298 Q68 330 70 360 Q72 380 82 390 L85 382 Q82 360 82 330 Z' },
-    
-    { id: 'ham-medial-r', name: 'Legs', level: muscleLevels.legs,
-      d: 'M108 298 Q110 330 108 360 Q105 380 95 390 L98 385 Q100 360 100 330 Z' },
-    { id: 'ham-lateral-r', name: 'Legs', level: muscleLevels.legs,
-      d: 'M128 298 Q132 330 130 360 Q128 380 118 390 L115 382 Q118 360 118 330 Z' },
+    // HAMSTRINGS
+    { id: 'hamstring-left', name: 'Legs', level: muscleLevels.legs,
+      d: 'M72 280 Q65 310 68 340 Q73 360 85 368 L92 360 Q88 335 88 305 Z' },
+    { id: 'hamstring-right', name: 'Legs', level: muscleLevels.legs,
+      d: 'M128 280 Q135 310 132 340 Q127 360 115 368 L108 360 Q112 335 112 305 Z' },
 
-    // --- CALVES (back) ---
-    { id: 'calf-back-medial-l', name: 'Legs', level: muscleLevels.legs,
-      d: 'M82 395 Q80 420 82 450 Q85 475 95 485 L100 478 Q98 450 98 425 Z' },
-    { id: 'calf-back-lateral-l', name: 'Legs', level: muscleLevels.legs,
-      d: 'M72 398 Q68 425 70 455 Q73 478 82 490 L88 483 Q85 460 85 435 L78 405 Z' },
-    
-    { id: 'calf-back-medial-r', name: 'Legs', level: muscleLevels.legs,
-      d: 'M118 395 Q120 420 118 450 Q115 475 105 485 L100 478 Q102 450 102 425 Z' },
-    { id: 'calf-back-lateral-r', name: 'Legs', level: muscleLevels.legs,
-      d: 'M128 398 Q132 425 130 455 Q127 478 118 490 L112 483 Q115 460 115 435 L122 405 Z' },
+    // CALVES - back
+    { id: 'calf-back-left', name: 'Legs', level: muscleLevels.legs,
+      d: 'M68 375 Q62 400 65 428 Q70 445 80 450 L87 440 Q85 415 85 390 Z' },
+    { id: 'calf-back-right', name: 'Legs', level: muscleLevels.legs,
+      d: 'M132 375 Q138 400 135 428 Q130 445 120 450 L113 440 Q115 415 115 390 Z' },
   ]
 
   const muscles = view === 'front' ? frontMuscles : backMuscles
 
-  // Build gradient defs for every muscle with better gradients
+  // Build gradient defs
   const gradientDefs = muscles.map(m => {
     const c = PREMIUM_COLORS[m.level]
     return (
-      <linearGradient key={`grad-${m.id}`} id={`grad-${m.id}`} x1="0%" y1="0%" x2="50%" y2="100%">
-        <stop offset="0%" stopColor={c.gradient[1]} stopOpacity="0.9" />
-        <stop offset="50%" stopColor={c.gradient[1]} stopOpacity="1" />
-        <stop offset="100%" stopColor={c.gradient[0]} stopOpacity="0.85" />
+      <linearGradient key={`grad-${m.id}`} id={`grad-${m.id}`} x1="0%" y1="0%" x2="40%" y2="100%">
+        <stop offset="0%" stopColor={c.gradient[1]} stopOpacity="1" />
+        <stop offset="100%" stopColor={c.gradient[0]} stopOpacity="1" />
       </linearGradient>
     )
   })
 
   return (
     <div className="relative flex justify-center">
-      <svg viewBox="0 0 200 500" className="h-[480px] w-auto drop-shadow-2xl">
+      <svg viewBox="0 0 200 480" className="h-[420px] w-auto drop-shadow-2xl">
         <defs>
           {gradientDefs}
-          {/* Skin tone gradient for body outline */}
-          <linearGradient id="skin-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#e8c9a8" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="#c9a882" stopOpacity="0.08" />
-          </linearGradient>
-          <filter id="bodyGlow">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
         </defs>
 
-        {/* Body silhouette outline with subtle definition */}
-        <g opacity="0.3">
+        {/* Subtle body outline */}
+        <g opacity="0.15">
+          <ellipse cx="100" cy="60" rx="18" ry="22" fill="rgba(200,200,200,0.3)" />
           <path
-            d={view === 'front' 
-              ? 'M75 20 L80 25 L60 100 L54 150 L52 230 L60 280 L72 380 L78 460 L100 500 L122 460 L128 380 L140 280 L148 230 L146 150 L140 100 L120 25 L125 20 Q100 15 75 20 Z'
-              : 'M75 20 L80 25 L60 100 L54 150 L52 230 L60 280 L72 380 L78 460 L100 500 L122 460 L128 380 L140 280 L148 230 L146 150 L140 100 L120 25 L125 20 Q100 15 75 20 Z'
-            }
-            fill="none"
+            d="M60 95 L50 200 L52 280 L70 380 L100 460 L130 380 L148 280 L150 200 L140 95 Q100 80 60 95 Z"
+            fill="rgba(200,200,200,0.2)"
             stroke="rgba(255,255,255,0.08)"
-            strokeWidth="1"
+            strokeWidth="0.5"
           />
         </g>
 
-        {/* Muscle paths with shadows */}
+        {/* Muscle paths */}
         {muscles.map(m => (
           <MusclePath
             key={m.id}
@@ -372,28 +257,17 @@ function BodySVG({ view, muscleLevels }: { view: 'front' | 'back'; muscleLevels:
           />
         ))}
 
-        {/* Anatomical definition lines */}
-        <g stroke="rgba(0,0,0,0.35)" strokeWidth="0.5" fill="none" opacity="0.6">
+        {/* Light definition lines */}
+        <g stroke="rgba(255,255,255,0.1)" strokeWidth="0.4" fill="none" opacity="0.4">
           {view === 'front' ? (
             <>
-              {/* Sternum line */}
-              <line x1="100" y1="92" x2="100" y2="210" />
-              {/* Abs vertical separator */}
-              <line x1="100" y1="158" x2="100" y2="196" />
-              {/* Quad dividers */}
-              <line x1="88" y1="275" x2="88" y2="370" opacity="0.5" />
-              <line x1="112" y1="275" x2="112" y2="370" opacity="0.5" />
-              {/* Pec separation */}
-              <line x1="100" y1="105" x2="100" y2="160" />
+              <line x1="100" y1="140" x2="100" y2="195" />
+              <line x1="92" y1="155" x2="108" y2="155" />
+              <line x1="92" y1="173" x2="108" y2="173" />
             </>
           ) : (
             <>
-              {/* Spine line */}
-              <line x1="100" y1="75" x2="100" y2="250" />
-              {/* Glute divider */}
-              <line x1="100" y1="255" x2="100" y2="295" opacity="0.5" />
-              {/* Hamstring divider */}
-              <line x1="100" y1="298" x2="100" y2="390" opacity="0.4" />
+              <line x1="100" y1="85" x2="100" y2="225" />
             </>
           )}
         </g>
@@ -408,9 +282,9 @@ function BodySVG({ view, muscleLevels }: { view: 'front' | 'back'; muscleLevels:
           <div
             className="rounded-xl px-3 py-2 shadow-xl backdrop-blur-md"
             style={{
-              background: 'rgba(10,12,18,0.95)',
-              border: `1px solid ${PREMIUM_COLORS[tooltip.level].fill}77`,
-              boxShadow: `0 0 20px ${PREMIUM_COLORS[tooltip.level].glow}55, inset 0 0 8px ${PREMIUM_COLORS[tooltip.level].glow}22`,
+              background: 'rgba(10,12,18,0.92)',
+              border: `1px solid ${PREMIUM_COLORS[tooltip.level].fill}66`,
+              boxShadow: `0 0 16px ${PREMIUM_COLORS[tooltip.level].glow}44`,
             }}
           >
             <p className="text-xs font-semibold text-white">{tooltip.name}</p>
@@ -484,9 +358,7 @@ export function BodyChartPage() {
   const [activeTab, setActiveTab] = useState<PRGroup>('chest')
   const [verifiedVideos, setVerifiedVideos] = useState<Record<string, string>>({})
   const [videoModal, setVideoModal] = useState<{ url: string; name: string } | null>(null)
-  // Raw weights entered by user (before e1RM conversion), keyed by exerciseId
   const [rawWeights, setRawWeights] = useState<Record<string, number>>({})
-  // Reps entered by user for each exercise (default 1 = treat as 1RM)
   const [repsMap, setRepsMap] = useState<Record<string, number>>({})
 
   const handleWeightInput = (group: PRGroup, exerciseId: string, weight: number) => {

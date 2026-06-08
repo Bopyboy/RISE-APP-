@@ -16,8 +16,25 @@ import {
   isWeightedExercise,
 } from '@/lib/strength-standards'
 import { calculatePerformanceScore, getRankByPerformance } from '@/lib/performance-rank'
+import { BarChart, Bar, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts'
 import { RotateCcw, Info, Video, CheckCircle2, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+const PREMIUM_COLORS: Record<MuscleLevel, { fill: string; glow: string }> = {
+  untrained:    { fill: '#1e2028', glow: 'transparent' },
+  beginner:     { fill: '#dc2626', glow: '#dc2626' },
+  intermediate: { fill: '#ea7c18', glow: '#ea7c18' },
+  advanced:     { fill: '#2563eb', glow: '#2563eb' },
+  elite:        { fill: '#16a34a', glow: '#16a34a' },
+}
+
+const TIER_LABELS: Record<MuscleLevel, string> = {
+  untrained: 'Untrained',
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+  elite: 'Elite',
+}
 
 function getGroupAverageLevel(
   prs: { [key: string]: number },
@@ -42,235 +59,11 @@ function getGroupAverageLevel(
   return 'elite'
 }
 
-// Premium color palette per level
-const PREMIUM_COLORS: Record<MuscleLevel, { fill: string; glow: string }> = {
-  untrained:    { fill: '#1e2028', glow: 'transparent' },
-  beginner:     { fill: '#dc2626', glow: '#dc2626' },
-  intermediate: { fill: '#ea7c18', glow: '#ea7c18' },
-  advanced:     { fill: '#2563eb', glow: '#2563eb' },
-  elite:        { fill: '#16a34a', glow: '#16a34a' },
+function getTierValue(level: MuscleLevel): number {
+  const tierValues = { untrained: 0, beginner: 1, intermediate: 2, advanced: 3, elite: 4 }
+  return tierValues[level]
 }
 
-const TIER_LABELS: Record<MuscleLevel, string> = {
-  untrained: 'Untrained',
-  beginner: 'Beginner',
-  intermediate: 'Intermediate',
-  advanced: 'Advanced',
-  elite: 'Elite',
-}
-
-function MusclePath({
-  id, d, level, name, onHover, onLeave,
-}: {
-  id: string
-  d: string
-  level: MuscleLevel
-  name: string
-  onHover: (name: string, level: MuscleLevel, e: React.MouseEvent | React.TouchEvent) => void
-  onLeave: () => void
-}) {
-  const c = PREMIUM_COLORS[level]
-  return (
-    <path
-      key={id}
-      d={d}
-      fill={c.fill}
-      style={{
-        filter: level !== 'untrained'
-          ? `drop-shadow(0 0 10px ${c.glow}) drop-shadow(0 0 5px ${c.glow})`
-          : `drop-shadow(0 0 2px ${c.glow})`,
-        opacity: level === 'untrained' ? 0.55 : 1,
-        transition: 'all 0.3s ease',
-        cursor: 'pointer',
-      }}
-      className="cursor-pointer"
-      onMouseEnter={e => onHover(name, level, e)}
-      onMouseLeave={onLeave}
-      onTouchStart={e => onHover(name, level, e)}
-      onTouchEnd={onLeave}
-    />
-  )
-}
-
-function BodySVG({ view, muscleLevels }: { view: 'front' | 'back'; muscleLevels: Record<string, MuscleLevel> }) {
-  const [tooltip, setTooltip] = useState<{ name: string; level: MuscleLevel; cx: number; cy: number } | null>(null)
-
-  const handleHover = (name: string, level: MuscleLevel, e: React.MouseEvent | React.TouchEvent) => {
-    const svgEl = (e.currentTarget as SVGElement).closest('svg')
-    const containerEl = svgEl?.parentElement
-    if (!containerEl || !svgEl) return
-    const rect = (e.currentTarget as SVGElement).getBoundingClientRect()
-    const containerRect = containerEl.getBoundingClientRect()
-    setTooltip({
-      name, level,
-      cx: rect.left + rect.width / 2 - containerRect.left,
-      cy: rect.top - containerRect.top,
-    })
-  }
-
-  // FRONT VIEW - Properly connected body
-  const frontMuscles = [
-    // HEAD - sits on shoulders
-    { id: 'head', name: 'Head', level: muscleLevels.chest,
-      d: 'M85 20 Q100 15 115 20 Q125 30 125 45 Q125 60 100 68 Q75 60 75 45 Q75 30 85 20 Z' },
-
-    // TRAPEZIUS (connects shoulders to neck)
-    { id: 'trap-left', name: 'Shoulders', level: muscleLevels.shoulders,
-      d: 'M85 68 L75 90 Q70 100 72 110 L90 95 Z' },
-    { id: 'trap-right', name: 'Shoulders', level: muscleLevels.shoulders,
-      d: 'M115 68 L125 90 Q130 100 128 110 L110 95 Z' },
-
-    // SHOULDERS (large rounded caps on torso)
-    { id: 'shoulder-left', name: 'Shoulders', level: muscleLevels.shoulders,
-      d: 'M65 88 Q55 92 50 105 Q52 120 68 125 L75 110 Z' },
-    { id: 'shoulder-right', name: 'Shoulders', level: muscleLevels.shoulders,
-      d: 'M135 88 Q145 92 150 105 Q148 120 132 125 L125 110 Z' },
-
-    // CHEST (large pectoral area - upper torso)
-    { id: 'chest', name: 'Chest', level: muscleLevels.chest,
-      d: 'M78 95 Q78 100 80 115 Q82 130 90 140 Q100 145 110 140 Q118 130 120 115 Q122 100 122 95 L100 88 Z' },
-
-    // CORE/ABS (central vertical strip - lower torso)
-    { id: 'abs', name: 'Core', level: muscleLevels.core,
-      d: 'M92 142 Q100 140 108 142 L108 180 Q100 185 92 180 Z' },
-
-    // BICEPS/UPPER ARM LEFT
-    { id: 'bicep-left', name: 'Arms', level: muscleLevels.arms,
-      d: 'M50 125 Q40 130 38 155 Q40 175 55 182 L68 160 L72 130 Z' },
-    // BICEPS/UPPER ARM RIGHT
-    { id: 'bicep-right', name: 'Arms', level: muscleLevels.arms,
-      d: 'M150 125 Q160 130 162 155 Q160 175 145 182 L132 160 L128 130 Z' },
-
-    // FOREARM LEFT
-    { id: 'forearm-left', name: 'Arms', level: muscleLevels.arms,
-      d: 'M38 185 Q32 200 32 220 Q35 235 50 240 L58 218 Z' },
-    // FOREARM RIGHT
-    { id: 'forearm-right', name: 'Arms', level: muscleLevels.arms,
-      d: 'M162 185 Q168 200 168 220 Q165 235 150 240 L142 218 Z' },
-
-    // QUADRICEPS LEFT (upper leg - large)
-    { id: 'quad-left', name: 'Legs', level: muscleLevels.legs,
-      d: 'M88 185 Q85 200 84 225 Q85 260 92 285 Q98 288 102 285 Q108 260 108 225 Q108 200 108 185 Z' },
-    // QUADRICEPS RIGHT (upper leg - large)
-    { id: 'quad-right', name: 'Legs', level: muscleLevels.legs,
-      d: 'M112 185 Q115 200 116 225 Q115 260 108 285 Q102 288 98 285 Q92 260 92 225 Q92 200 92 185 Z' },
-
-    // CALF LEFT (lower leg)
-    { id: 'calf-left', name: 'Legs', level: muscleLevels.legs,
-      d: 'M90 290 Q88 310 88 330 Q90 350 100 360 L102 330 Q102 310 102 290 Z' },
-    // CALF RIGHT (lower leg)
-    { id: 'calf-right', name: 'Legs', level: muscleLevels.legs,
-      d: 'M110 290 Q112 310 112 330 Q110 350 100 360 L98 330 Q98 310 98 290 Z' },
-  ]
-
-  // BACK VIEW - Properly connected
-  const backMuscles = [
-    // HEAD
-    { id: 'head-back', name: 'Head', level: muscleLevels.chest,
-      d: 'M85 20 Q100 15 115 20 Q125 30 125 45 Q125 60 100 68 Q75 60 75 45 Q75 30 85 20 Z' },
-
-    // TRAPEZIUS (large upper back)
-    { id: 'trap', name: 'Back', level: muscleLevels.back,
-      d: 'M85 68 L75 90 Q70 105 72 125 L100 95 L128 125 Q130 105 125 90 L115 68 Z' },
-
-    // SHOULDERS/REAR DELTS
-    { id: 'shoulder-left-back', name: 'Shoulders', level: muscleLevels.shoulders,
-      d: 'M68 100 Q55 105 50 125 Q52 145 70 155 L78 130 Z' },
-    { id: 'shoulder-right-back', name: 'Shoulders', level: muscleLevels.shoulders,
-      d: 'M132 100 Q145 105 150 125 Q148 145 130 155 L122 130 Z' },
-
-    // LATS (large side back muscles)
-    { id: 'lat-left', name: 'Back', level: muscleLevels.back,
-      d: 'M72 128 Q60 145 58 170 Q62 200 80 220 L92 200 L95 145 Z' },
-    { id: 'lat-right', name: 'Back', level: muscleLevels.back,
-      d: 'M128 128 Q140 145 142 170 Q138 200 120 220 L108 200 L105 145 Z' },
-
-    // CENTER BACK (rhomboids/upper back)
-    { id: 'back-center', name: 'Back', level: muscleLevels.back,
-      d: 'M90 95 L110 95 L112 145 L88 145 Z' },
-
-    // LOWER BACK (erectors)
-    { id: 'lower-back', name: 'Back', level: muscleLevels.back,
-      d: 'M92 148 L108 148 L108 185 L92 185 Z' },
-
-    // TRICEPS (back of arms)
-    { id: 'tricep-left', name: 'Arms', level: muscleLevels.arms,
-      d: 'M50 160 Q38 170 36 195 Q40 220 58 228 L68 200 Z' },
-    { id: 'tricep-right', name: 'Arms', level: muscleLevels.arms,
-      d: 'M150 160 Q162 170 164 195 Q160 220 142 228 L132 200 Z' },
-
-    // FOREARMS - back
-    { id: 'back-forearm-left', name: 'Arms', level: muscleLevels.arms,
-      d: 'M36 232 Q30 250 32 270 Q40 285 55 290 L62 268 Z' },
-    { id: 'back-forearm-right', name: 'Arms', level: muscleLevels.arms,
-      d: 'M164 232 Q170 250 168 270 Q160 285 145 290 L138 268 Z' },
-
-    // GLUTES (butt - two round shapes)
-    { id: 'glute-left', name: 'Legs', level: muscleLevels.legs,
-      d: 'M85 188 Q78 200 78 220 Q82 235 100 240 L100 215 Z' },
-    { id: 'glute-right', name: 'Legs', level: muscleLevels.legs,
-      d: 'M115 188 Q122 200 122 220 Q118 235 100 240 L100 215 Z' },
-
-    // HAMSTRINGS LEFT
-    { id: 'ham-left', name: 'Legs', level: muscleLevels.legs,
-      d: 'M88 242 Q85 265 86 290 Q90 315 100 325 L100 290 Z' },
-    // HAMSTRINGS RIGHT
-    { id: 'ham-right', name: 'Legs', level: muscleLevels.legs,
-      d: 'M112 242 Q115 265 114 290 Q110 315 100 325 L100 290 Z' },
-
-    // CALF - back LEFT
-    { id: 'calf-back-left', name: 'Legs', level: muscleLevels.legs,
-      d: 'M95 328 Q92 345 92 365 Q95 380 102 385 L102 360 Z' },
-    // CALF - back RIGHT
-    { id: 'calf-back-right', name: 'Legs', level: muscleLevels.legs,
-      d: 'M105 328 Q108 345 108 365 Q105 380 98 385 L98 360 Z' },
-  ]
-
-  const muscles = view === 'front' ? frontMuscles : backMuscles
-
-  return (
-    <div className="relative flex justify-center">
-      <svg viewBox="0 0 200 390" className="h-[380px] w-auto drop-shadow-2xl">
-        {/* Muscle paths */}
-        {muscles.map(m => (
-          <MusclePath
-            key={m.id}
-            id={m.id}
-            d={m.d}
-            level={m.level}
-            name={m.name}
-            onHover={handleHover}
-            onLeave={() => setTooltip(null)}
-          />
-        ))}
-      </svg>
-
-      {/* Tooltip */}
-      {tooltip && (
-        <div
-          className="pointer-events-none absolute z-10"
-          style={{ left: tooltip.cx, top: tooltip.cy - 8, transform: 'translate(-50%, -100%)' }}
-        >
-          <div
-            className="rounded-xl px-3 py-2 shadow-xl backdrop-blur-md"
-            style={{
-              background: 'rgba(10,12,18,0.92)',
-              border: `1px solid ${PREMIUM_COLORS[tooltip.level].fill}66`,
-              boxShadow: `0 0 16px ${PREMIUM_COLORS[tooltip.level].glow}44`,
-            }}
-          >
-            <p className="text-xs font-semibold text-white">{tooltip.name}</p>
-            <p className="text-[10px] font-medium capitalize" style={{ color: PREMIUM_COLORS[tooltip.level].fill }}>
-              {TIER_LABELS[tooltip.level]}
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Compact score ring
 function ScoreRing({ score, rank }: { score: number; rank: string }) {
   const radius = 36
   const circ = 2 * Math.PI * radius
@@ -326,7 +119,6 @@ function ScoreRing({ score, rank }: { score: number; rank: string }) {
 
 export function BodyChartPage() {
   const { bodyPRs, updateBodyPR, resetAllPRs, settings } = useApp()
-  const [view, setView] = useState<'front' | 'back'>('front')
   const [activeTab, setActiveTab] = useState<PRGroup>('chest')
   const [verifiedVideos, setVerifiedVideos] = useState<Record<string, string>>({})
   const [videoModal, setVideoModal] = useState<{ url: string; name: string } | null>(null)
@@ -369,13 +161,21 @@ export function BodyChartPage() {
     core: getGroupAverageLevel(bodyPRs.core, PR_EXERCISE_GROUPS.core, profile),
   }
 
+  // Data for the body chart - muscle groups with scores
+  const bodyChartData = [
+    { name: 'Chest', level: muscleLevels.chest, value: getTierValue(muscleLevels.chest) },
+    { name: 'Back', level: muscleLevels.back, value: getTierValue(muscleLevels.back) },
+    { name: 'Shoulders', level: muscleLevels.shoulders, value: getTierValue(muscleLevels.shoulders) },
+    { name: 'Arms', level: muscleLevels.arms, value: getTierValue(muscleLevels.arms) },
+    { name: 'Core', level: muscleLevels.core, value: getTierValue(muscleLevels.core) },
+    { name: 'Legs', level: muscleLevels.legs, value: getTierValue(muscleLevels.legs) },
+  ]
+
   const tabs = Object.entries(PR_EXERCISE_GROUPS).map(([id]) => ({
     id: id as PRGroup,
     label: id.charAt(0).toUpperCase() + id.slice(1),
     level: muscleLevels[id as keyof typeof muscleLevels],
   }))
-
-  const TIER_ORDER: MuscleLevel[] = ['untrained', 'beginner', 'intermediate', 'advanced', 'elite']
 
   return (
     <div className="space-y-4 pb-24">
@@ -394,7 +194,7 @@ export function BodyChartPage() {
         </p>
       </div>
 
-      {/* Body Graph Card */}
+      {/* Body Chart Card - Using Recharts */}
       <div
         className="overflow-hidden rounded-2xl"
         style={{
@@ -402,38 +202,48 @@ export function BodyChartPage() {
           border: '1px solid rgba(255,255,255,0.07)',
         }}
       >
-        {/* Card Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-yellow-400" />
-            <h2 className="text-sm font-bold uppercase tracking-widest text-white/80">Body Graph</h2>
-          </div>
-          {/* Front / Back toggle */}
-          <div
-            className="flex rounded-lg p-0.5"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
-          >
-            {(['front', 'back'] as const).map(v => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setView(v)}
-                className={cn(
-                  'rounded-md px-3 py-1 text-xs font-semibold capitalize transition-all duration-200',
-                  view === v
-                    ? 'bg-white text-black shadow'
-                    : 'text-white/40 hover:text-white/70'
-                )}
-              >
-                {v}
-              </button>
-            ))}
+            <h2 className="text-sm font-bold uppercase tracking-widest text-white/80">Strength Overview</h2>
           </div>
         </div>
 
-        {/* SVG */}
-        <div className="px-4 pb-2">
-          <BodySVG view={view} muscleLevels={muscleLevels} />
+        <div className="px-4 pb-6">
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={bodyChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <XAxis 
+                dataKey="name" 
+                stroke="rgba(255,255,255,0.15)"
+                tick={{ fontSize: 12, fill: 'rgba(255,255,255,0.5)' }}
+              />
+              <YAxis 
+                stroke="rgba(255,255,255,0.15)"
+                domain={[0, 4]}
+                hide
+              />
+              <RechartsTooltip 
+                contentStyle={{
+                  background: 'rgba(10,12,18,0.95)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  padding: '8px',
+                }}
+                formatter={(value, name, props) => [TIER_LABELS[props.payload.level], 'Level']}
+                labelStyle={{ color: '#fff' }}
+              />
+              <Bar dataKey="value" radius={[10, 10, 0, 0]} isAnimationActive animationDuration={800}>
+                {bodyChartData.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`}
+                    fill={PREMIUM_COLORS[entry.level].fill}
+                    opacity={entry.level === 'untrained' ? 0.5 : 0.9}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
         {/* Legend */}
@@ -441,7 +251,7 @@ export function BodyChartPage() {
           className="mx-4 mb-4 flex items-center justify-between rounded-xl px-3 py-2"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
         >
-          {TIER_ORDER.map(level => (
+          {(['untrained', 'beginner', 'intermediate', 'advanced', 'elite'] as MuscleLevel[]).map(level => (
             <div key={level} className="flex flex-col items-center gap-1">
               <div
                 className="h-2.5 w-2.5 rounded-full"

@@ -498,7 +498,7 @@ function FormCameraModal({
     : null
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black">
+    <div className="fixed inset-0 z-[100] flex flex-col bg-black">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-black/80">
         <div>

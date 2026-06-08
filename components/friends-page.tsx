@@ -4,9 +4,10 @@ import { useState } from 'react'
 import { useApp } from '@/lib/app-context'
 import { getRankByPerformance, getNextPerformanceRank, getRankProgressPercent } from '@/lib/performance-rank'
 import { RANKS } from '@/lib/types'
-import { UserPlus, Copy, Check, Users, Search, X, Trophy, Flame, ChevronRight, Link } from 'lucide-react'
+import { UserPlus, Copy, Check, Users, Search, X, Trophy, Flame, ChevronRight, Link, Swords } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Friend } from '@/lib/types'
+import { RivalMode } from '@/components/rival-mode'
 
 export function FriendsPage() {
   const { friends, friendCode, addFriend, removeFriend } = useApp()
@@ -15,6 +16,7 @@ export function FriendsPage() {
   const [codeCopied, setCodeCopied] = useState(false)
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showRivalMode, setShowRivalMode] = useState(false)
 
   const copyCode = async () => {
     await navigator.clipboard.writeText(friendCode).catch(() => {})
@@ -36,6 +38,10 @@ export function FriendsPage() {
     f.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  if (showRivalMode) {
+    return <RivalMode onBack={() => setShowRivalMode(false)} />
+  }
+
   if (selectedFriend) {
     return <FriendProfileView friend={selectedFriend} onBack={() => setSelectedFriend(null)} />
   }
@@ -47,6 +53,25 @@ export function FriendsPage() {
         <h1 className="text-2xl font-bold text-foreground">Friends</h1>
         <p className="text-sm text-muted-foreground">Connect and compete with friends</p>
       </div>
+
+      {/* Rival Mode Entry */}
+      <button
+        onClick={() => setShowRivalMode(true)}
+        className="w-full relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-600 via-orange-600 to-amber-500 p-4 text-left shadow-lg shadow-rose-500/20 active:scale-[0.98] transition-transform"
+      >
+        <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10" />
+        <div className="absolute -bottom-6 right-8 h-16 w-16 rounded-full bg-white/5" />
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20">
+            <Swords className="h-6 w-6 text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="font-black text-white">Rival Mode ⚔️</p>
+            <p className="text-xs text-white/75">Pick a rival. Compete weekly. Earn bragging rights.</p>
+          </div>
+          <ChevronRight className="h-5 w-5 text-white/60" />
+        </div>
+      </button>
 
       {/* My Friend Code */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 p-5 text-white">

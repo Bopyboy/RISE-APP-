@@ -6,11 +6,12 @@ import { generateFitnessPlan } from '@/lib/fitness-plans'
 import { WorkoutPage } from '@/components/workout-page'
 import { WorkoutSession } from '@/components/workout-session'
 import { ExercisesPage } from '@/components/exercises-page'
+import { FormCoachPage } from '@/components/form-coach-page'
 import { WorkoutDay } from '@/lib/types'
-import { Dumbbell, Sparkles, CalendarDays, Play, BookOpen } from 'lucide-react'
+import { Dumbbell, Sparkles, CalendarDays, Play, BookOpen, ScanFace } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type TrainSection = 'plan' | 'workouts' | 'exercises'
+type TrainSection = 'plan' | 'workouts' | 'exercises' | 'form'
 
 export function TrainPage({ onTabChange }: { onTabChange?: (tab: string) => void }) {
   const { settings, bodyPRs, workoutSplit } = useApp()
@@ -37,6 +38,7 @@ export function TrainPage({ onTabChange }: { onTabChange?: (tab: string) => void
     { id: 'plan',      label: 'My Plan',   icon: Sparkles  },
     { id: 'workouts',  label: 'Workouts',  icon: Dumbbell  },
     { id: 'exercises', label: 'Exercises', icon: BookOpen  },
+    { id: 'form',      label: 'AI Form',   icon: ScanFace  },
   ]
 
   // ── Live session view ──────────────────────────────────────────────────────
@@ -66,7 +68,11 @@ export function TrainPage({ onTabChange }: { onTabChange?: (tab: string) => void
               onClick={() => setSection(t.id)}
               className={cn(
                 'flex flex-shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-semibold transition-colors',
-                section === t.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+                section === t.id
+                  ? t.id === 'form'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground'
               )}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -106,6 +112,24 @@ export function TrainPage({ onTabChange }: { onTabChange?: (tab: string) => void
               </p>
             </div>
             <span className="text-sm font-medium text-primary">Open →</span>
+          </button>
+
+          {/* AI Form Coach promo card */}
+          <button
+            type="button"
+            onClick={() => setSection('form')}
+            className="flex w-full items-center gap-3 rounded-2xl border border-purple-500/30 bg-purple-500/5 p-4 text-left transition-colors hover:border-purple-500/50"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-500/15">
+              <ScanFace className="h-5 w-5 text-purple-400" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">AI Form Coach</p>
+              <p className="text-sm text-muted-foreground">
+                Get real-time form scoring on your lifts
+              </p>
+            </div>
+            <span className="text-sm font-medium text-purple-400">Try it →</span>
           </button>
 
           {/* Workout days with Start buttons */}
@@ -197,6 +221,8 @@ export function TrainPage({ onTabChange }: { onTabChange?: (tab: string) => void
       )}
 
       {section === 'exercises' && <ExercisesPage />}
+
+      {section === 'form' && <FormCoachPage />}
     </div>
   )
 }

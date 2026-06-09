@@ -1,11 +1,13 @@
 'use client'
 
 // components/exercise-guide-modal.tsx
-// Drop this file into your components/ folder
-// Usage: <ExerciseGuideModal exerciseName="Bench Press" open={open} onClose={() => setOpen(false)} />
+// Replaces the YouTube link with a consistent-style exercise demo GIF.
+// GIFs are sourced from ExerciseDB (https://exercisedb.dev) — all 1500
+// exercises share the same 3D-character art style so they look matched.
+// Attribution to AscendAPI is required per their free tier.
 
 import { useState } from 'react'
-import { X, ChevronDown, ChevronUp, Youtube, Zap, AlertTriangle, Wind, Star } from 'lucide-react'
+import { X, ChevronDown, ChevronUp, Zap, AlertTriangle, Wind, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getExerciseGuide } from '@/lib/exercise-guides'
 
@@ -19,6 +21,54 @@ const DIFFICULTY_COLORS = {
   Beginner: 'text-green-400 bg-green-400/10 border-green-400/20',
   Intermediate: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
   Advanced: 'text-red-400 bg-red-400/10 border-red-400/20',
+}
+
+// Exercise name (as it appears in exercise-guides.ts) -> ExerciseDB GIF URL.
+// Add more here as you expand exercise-guides.ts. Keys are case-insensitive.
+const EXERCISE_GIFS: Record<string, string> = {
+  'bench press':        'https://static.exercisedb.dev/media/EIeI8Vf.gif',
+  'squat':              'https://static.exercisedb.dev/media/qXTaZnJ.gif',
+  'deadlift':           'https://static.exercisedb.dev/media/ila4NZS.gif',
+  'overhead press':     'https://static.exercisedb.dev/media/Kyd9Rz5.gif',
+  'pull-ups':           'https://static.exercisedb.dev/media/lBDjFxJ.gif',
+  'pull ups':           'https://static.exercisedb.dev/media/lBDjFxJ.gif',
+  'barbell curl':       'https://static.exercisedb.dev/media/25GPyDY.gif',
+  'lateral raises':     'https://static.exercisedb.dev/media/DsgkuIt.gif',
+  'tricep pushdowns':   'https://static.exercisedb.dev/media/3ZflifB.gif',
+  'plank':              'https://static.exercisedb.dev/media/VBAWRPG.gif',
+  'romanian deadlift':  'https://static.exercisedb.dev/media/wQ2c4XD.gif',
+}
+
+function gifFor(name: string): string | undefined {
+  const key = name.toLowerCase().trim()
+  return EXERCISE_GIFS[key]
+}
+
+function ExerciseAnimation({ name }: { name: string }) {
+  const url = gifFor(name)
+  const [failed, setFailed] = useState(false)
+
+  if (!url || failed) {
+    return (
+      <div className="rounded-2xl border border-border bg-secondary/30 aspect-video flex items-center justify-center">
+        <p className="text-xs text-muted-foreground">No demo available</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-2xl overflow-hidden border border-border bg-white aspect-video relative">
+      <img
+        src={url}
+        alt={`${name} demonstration`}
+        onError={() => setFailed(true)}
+        className="w-full h-full object-contain"
+      />
+      <span className="absolute bottom-1.5 right-2 text-[9px] text-black/40 font-medium">
+        via ExerciseDB
+      </span>
+    </div>
+  )
 }
 
 export function ExerciseGuideModal({ exerciseName, open, onClose }: Props) {
@@ -64,7 +114,6 @@ export function ExerciseGuideModal({ exerciseName, open, onClose }: Props) {
     </div>
   )
 
-  // No guide available — generic fallback
   if (!guide) {
     return (
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm px-4 pb-6">
@@ -75,18 +124,10 @@ export function ExerciseGuideModal({ exerciseName, open, onClose }: Props) {
               <X className="h-5 w-5 text-muted-foreground" />
             </button>
           </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            No detailed guide yet for this exercise. Search for form tips below.
+          <ExerciseAnimation name={exerciseName} />
+          <p className="text-sm text-muted-foreground mt-4">
+            No detailed guide yet for this exercise.
           </p>
-          <a
-            href={`https://www.youtube.com/results?search_query=${encodeURIComponent(exerciseName + ' form tutorial')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full rounded-2xl bg-red-500/10 border border-red-500/20 py-3 text-sm font-semibold text-red-400"
-          >
-            <Youtube className="h-4 w-4" />
-            Search on YouTube
-          </a>
         </div>
       </div>
     )
@@ -139,9 +180,11 @@ export function ExerciseGuideModal({ exerciseName, open, onClose }: Props) {
           </div>
         </div>
 
-        {/* Scrollable sections */}
+        {/* Scrollable */}
         <div className="overflow-y-auto flex-1 px-5 pb-5 space-y-3">
-          {/* Form Cues */}
+          {/* Demo animation (replaces YouTube link) */}
+          <ExerciseAnimation name={guide.name} />
+
           <Section id="cues" icon={Zap} title="Form Cues" color="text-primary">
             <ul className="mt-3 space-y-2">
               {guide.formCues.map((cue, i) => (
@@ -155,7 +198,6 @@ export function ExerciseGuideModal({ exerciseName, open, onClose }: Props) {
             </ul>
           </Section>
 
-          {/* Common Mistakes */}
           <Section id="mistakes" icon={AlertTriangle} title="Common Mistakes" color="text-red-400">
             <ul className="mt-3 space-y-2">
               {guide.commonMistakes.map((mistake, i) => (
@@ -167,26 +209,13 @@ export function ExerciseGuideModal({ exerciseName, open, onClose }: Props) {
             </ul>
           </Section>
 
-          {/* Breathing */}
           <Section id="breathing" icon={Wind} title="Breathing" color="text-blue-400">
             <p className="mt-3 text-sm text-foreground leading-relaxed">{guide.breathingTip}</p>
           </Section>
 
-          {/* Pro Tip */}
           <Section id="protip" icon={Star} title="Pro Tip" color="text-yellow-400">
             <p className="mt-3 text-sm text-foreground leading-relaxed">{guide.proTip}</p>
           </Section>
-
-          {/* YouTube */}
-          <a
-            href={`https://www.youtube.com/results?search_query=${encodeURIComponent(guide.youtubeSearch)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full rounded-2xl bg-red-500/10 border border-red-500/20 py-3 text-sm font-semibold text-red-400 hover:bg-red-500/20 transition-colors"
-          >
-            <Youtube className="h-4 w-4" />
-            Watch form video on YouTube
-          </a>
         </div>
       </div>
     </div>

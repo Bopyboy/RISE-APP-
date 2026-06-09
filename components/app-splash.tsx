@@ -18,7 +18,7 @@ export function AppSplash() {
           width={200}
           height={200}
           priority
-          className="drop-shadow-2xl"
+          className="drop-shadow-2xl rounded-3xl"
         />
         <p className="mt-4 text-sm text-muted-foreground">Train smarter. Eat better. Rank up.</p>
         <div className="mt-8 flex gap-1">

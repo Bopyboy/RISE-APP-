@@ -1,6 +1,6 @@
 'use client'
 
-import { Home, Utensils, Dumbbell, LayoutGrid, Trophy } from 'lucide-react'
+import { Home, Utensils, Dumbbell, LayoutGrid, Target } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 
@@ -10,11 +10,11 @@ interface BottomNavProps {
 }
 
 const tabs = [
-  { id: 'home', icon: Home, label: 'Home' },
-  { id: 'train', icon: Dumbbell, label: 'Train' },
-  { id: 'food', icon: Utensils, label: 'Food' },
-  { id: 'ranks', icon: Trophy, label: 'Ranks' },
-  { id: 'more', icon: LayoutGrid, label: 'More' },
+  { id: 'home',   icon: Home,       label: 'Home' },
+  { id: 'train',  icon: Dumbbell,   label: 'Train' },
+  { id: 'food',   icon: Utensils,   label: 'Food' },
+  { id: 'goals',  icon: Target,     label: 'Goals' },
+  { id: 'more',   icon: LayoutGrid, label: 'More' },
 ]
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {

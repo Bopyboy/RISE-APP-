@@ -1,15 +1,10 @@
 'use client'
 
-// components/exercise-guide-modal.tsx
-// Replaces the YouTube link with a consistent-style exercise demo GIF.
-// GIFs are sourced from ExerciseDB (https://exercisedb.dev) — all 1500
-// exercises share the same 3D-character art style so they look matched.
-// Attribution to AscendAPI is required per their free tier.
-
 import { useState } from 'react'
 import { X, ChevronDown, ChevronUp, Zap, AlertTriangle, Wind, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getExerciseGuide } from '@/lib/exercise-guides'
+import { getExerciseImageUrl } from '@/lib/exercise-media'
 
 interface Props {
   exerciseName: string
@@ -23,49 +18,28 @@ const DIFFICULTY_COLORS = {
   Advanced: 'text-red-400 bg-red-400/10 border-red-400/20',
 }
 
-// Exercise name (as it appears in exercise-guides.ts) -> ExerciseDB GIF URL.
-// Add more here as you expand exercise-guides.ts. Keys are case-insensitive.
-const EXERCISE_GIFS: Record<string, string> = {
-  'bench press':        'https://static.exercisedb.dev/media/EIeI8Vf.gif',
-  'squat':              'https://static.exercisedb.dev/media/qXTaZnJ.gif',
-  'deadlift':           'https://static.exercisedb.dev/media/ila4NZS.gif',
-  'overhead press':     'https://static.exercisedb.dev/media/Kyd9Rz5.gif',
-  'pull-ups':           'https://static.exercisedb.dev/media/lBDjFxJ.gif',
-  'pull ups':           'https://static.exercisedb.dev/media/lBDjFxJ.gif',
-  'barbell curl':       'https://static.exercisedb.dev/media/25GPyDY.gif',
-  'lateral raises':     'https://static.exercisedb.dev/media/DsgkuIt.gif',
-  'tricep pushdowns':   'https://static.exercisedb.dev/media/3ZflifB.gif',
-  'plank':              'https://static.exercisedb.dev/media/VBAWRPG.gif',
-  'romanian deadlift':  'https://static.exercisedb.dev/media/wQ2c4XD.gif',
-}
-
-function gifFor(name: string): string | undefined {
-  const key = name.toLowerCase().trim()
-  return EXERCISE_GIFS[key]
-}
-
 function ExerciseAnimation({ name }: { name: string }) {
-  const url = gifFor(name)
+  const url = getExerciseImageUrl(name)
   const [failed, setFailed] = useState(false)
 
   if (!url || failed) {
     return (
       <div className="rounded-2xl border border-border bg-secondary/30 aspect-video flex items-center justify-center">
-        <p className="text-xs text-muted-foreground">No demo available</p>
+        <p className="text-xs text-muted-foreground">No exercise image available</p>
       </div>
     )
   }
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-border bg-white aspect-video relative">
+    <div className="rounded-2xl overflow-hidden border border-border bg-card aspect-video relative">
       <img
         src={url}
-        alt={`${name} demonstration`}
+        alt={`${name} exercise demonstration`}
         onError={() => setFailed(true)}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-cover"
       />
       <span className="absolute bottom-1.5 right-2 text-[9px] text-black/40 font-medium">
-        via ExerciseDB
+        exercise reference
       </span>
     </div>
   )
@@ -81,32 +55,17 @@ export function ExerciseGuideModal({ exerciseName, open, onClose }: Props) {
     setExpandedSection(prev => (prev === section ? null : section))
 
   const Section = ({
-    id,
-    icon: Icon,
-    title,
-    color,
-    children,
-  }: {
-    id: string
-    icon: any
-    title: string
-    color: string
-    children: React.ReactNode
-  }) => (
+    id, icon: Icon, title, color, children,
+  }: { id: string; icon: any; title: string; color: string; children: React.ReactNode }) => (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
-      <button
-        onClick={() => toggle(id)}
-        className="flex w-full items-center justify-between px-4 py-3"
-      >
+      <button onClick={() => toggle(id)} className="flex w-full items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
           <Icon className={cn('h-4 w-4', color)} />
           <span className="text-sm font-semibold text-foreground">{title}</span>
         </div>
-        {expandedSection === id ? (
-          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        )}
+        {expandedSection === id
+          ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
       </button>
       {expandedSection === id && (
         <div className="px-4 pb-4 border-t border-border">{children}</div>
@@ -125,9 +84,7 @@ export function ExerciseGuideModal({ exerciseName, open, onClose }: Props) {
             </button>
           </div>
           <ExerciseAnimation name={exerciseName} />
-          <p className="text-sm text-muted-foreground mt-4">
-            No detailed guide yet for this exercise.
-          </p>
+          <p className="text-sm text-muted-foreground mt-4">No detailed guide yet for this exercise.</p>
         </div>
       </div>
     )
@@ -136,53 +93,31 @@ export function ExerciseGuideModal({ exerciseName, open, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm px-4 pb-6">
       <div className="w-full max-w-lg rounded-3xl bg-background border border-border overflow-hidden max-h-[85vh] flex flex-col">
-        {/* Header */}
         <div className="px-5 pt-5 pb-4 flex-shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex-1 pr-4">
               <h2 className="text-xl font-bold text-foreground">{guide.name}</h2>
               <p className="text-xs text-muted-foreground mt-0.5">{guide.equipment}</p>
             </div>
-            <button
-              onClick={onClose}
-              className="flex-shrink-0 rounded-full p-2 hover:bg-secondary"
-            >
+            <button onClick={onClose} className="flex-shrink-0 rounded-full p-2 hover:bg-secondary">
               <X className="h-5 w-5 text-muted-foreground" />
             </button>
           </div>
 
-          {/* Tags */}
           <div className="flex flex-wrap gap-2 mt-3">
-            <span
-              className={cn(
-                'rounded-full border px-2.5 py-0.5 text-xs font-semibold',
-                DIFFICULTY_COLORS[guide.difficulty]
-              )}
-            >
+            <span className={cn('rounded-full border px-2.5 py-0.5 text-xs font-semibold', DIFFICULTY_COLORS[guide.difficulty])}>
               {guide.difficulty}
             </span>
             {guide.primaryMuscles.map(m => (
-              <span
-                key={m}
-                className="rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground"
-              >
-                {m}
-              </span>
+              <span key={m} className="rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">{m}</span>
             ))}
             {guide.secondaryMuscles.slice(0, 2).map(m => (
-              <span
-                key={m}
-                className="rounded-full border border-border bg-secondary/50 px-2.5 py-0.5 text-xs text-muted-foreground/60"
-              >
-                {m}
-              </span>
+              <span key={m} className="rounded-full border border-border bg-secondary/50 px-2.5 py-0.5 text-xs text-muted-foreground/60">{m}</span>
             ))}
           </div>
         </div>
 
-        {/* Scrollable */}
         <div className="overflow-y-auto flex-1 px-5 pb-5 space-y-3">
-          {/* Demo animation (replaces YouTube link) */}
           <ExerciseAnimation name={guide.name} />
 
           <Section id="cues" icon={Zap} title="Form Cues" color="text-primary">

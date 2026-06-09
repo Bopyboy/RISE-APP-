@@ -1,5 +1,6 @@
 'use client'
 
+import { getExerciseImageUrl } from '@/lib/exercise-media'
 import { useState } from 'react'
 import { useApp } from '@/lib/app-context'
 import { RankBadge } from '@/components/rank-badge'

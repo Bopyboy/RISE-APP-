@@ -13,7 +13,7 @@ export function AppSplash() {
         className="flex flex-col items-center"
       >
         <Image
-          src="/logo.png"
+          src="/rise picture logo"
           alt="Rise Fitness"
           width={200}
           height={200}

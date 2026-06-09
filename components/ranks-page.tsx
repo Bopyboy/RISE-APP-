@@ -5,7 +5,9 @@ import { RankBadge } from '@/components/rank-badge'
 import { BodyChartPage } from '@/components/body-chart-page'
 import { BodyCompositionPage } from '@/components/body-composition-page'
 import { ProgressPhotosPage } from '@/components/progress-photos-page'
-import { Activity, Scale, Camera, Trophy } from 'lucide-react'
+import { FriendsPage } from '@/components/friends-page'
+import { ShopPage } from '@/components/shop-page'
+import { Activity, Scale, Camera, Trophy, Users, ShoppingBag } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { RANKS } from '@/lib/types'
@@ -16,7 +18,7 @@ import {
   getPerformanceLabel,
 } from '@/lib/performance-rank'
 
-type RankSection = 'ranks' | 'body' | 'composition' | 'photos'
+type RankSection = 'ranks' | 'body' | 'composition' | 'photos' | 'friends' | 'shop'
 
 export function RanksPage() {
   const { getPerformanceScore } = useApp()
@@ -29,10 +31,12 @@ export function RanksPage() {
   const label = getPerformanceLabel(score)
 
   const tabs = [
-    { id: 'ranks' as RankSection,       label: 'Ranks',    icon: Trophy },
-    { id: 'body' as RankSection,        label: 'Body',     icon: Activity },
-    { id: 'composition' as RankSection, label: 'Body Fat', icon: Scale },
-    { id: 'photos' as RankSection,      label: 'Photos',   icon: Camera },
+    { id: 'ranks' as RankSection,       label: 'Ranks',   icon: Trophy },
+    { id: 'body' as RankSection,        label: 'Body',    icon: Activity },
+    { id: 'composition' as RankSection, label: 'Body Fat',icon: Scale },
+    { id: 'photos' as RankSection,      label: 'Photos',  icon: Camera },
+    { id: 'friends' as RankSection,     label: 'Friends', icon: Users },
+    { id: 'shop' as RankSection,        label: 'Shop',    icon: ShoppingBag },
   ]
 
   return (
@@ -155,6 +159,8 @@ export function RanksPage() {
       {section === 'body' && <BodyChartPage />}
       {section === 'composition' && <BodyCompositionPage />}
       {section === 'photos' && <ProgressPhotosPage />}
+      {section === 'friends' && <FriendsPage />}
+      {section === 'shop' && <ShopPage />}
     </div>
   )
 }

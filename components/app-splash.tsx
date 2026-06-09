@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 
 export function AppSplash() {
   return (
@@ -11,11 +12,15 @@ export function AppSplash() {
         transition={{ duration: 0.4 }}
         className="flex flex-col items-center"
       >
-        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary shadow-[0_0_40px] shadow-primary/40">
-          <span className="text-3xl font-black text-primary-foreground">R</span>
-        </div>
-        <h1 className="mt-6 text-3xl font-black tracking-tight text-foreground">Rise</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Train smarter. Eat better. Rank up.</p>
+        <Image
+          src="/logo.png"
+          alt="Rise Fitness"
+          width={200}
+          height={200}
+          priority
+          className="drop-shadow-2xl"
+        />
+        <p className="mt-4 text-sm text-muted-foreground">Train smarter. Eat better. Rank up.</p>
         <div className="mt-8 flex gap-1">
           {[0, 1, 2].map(i => (
             <motion.div

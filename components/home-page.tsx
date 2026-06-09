@@ -24,6 +24,8 @@ import {
   X,
   ShieldCheck,
   AlertCircle,
+  MessageCircle,
+  Settings,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RankBadge } from '@/components/rank-badge'
@@ -434,6 +436,8 @@ function PushupCameraModal({ onClose, onComplete }: {
 interface HomePageProps {
   onTabChange?: (tab: string) => void
   onGoToFood?: (view?: 'diary' | 'plan') => void
+  onOpenSettings?: () => void
+  onOpenCoach?: () => void
 }
 
 function DailyQuestCard() {
@@ -573,7 +577,7 @@ function MacroStat({ label, value, percent, barClass }: {
 
 // ─── Main HomePage ────────────────────────────────────────────────────────────
 
-export function HomePage({ onTabChange, onGoToFood }: HomePageProps) {
+export function HomePage({ onTabChange, onGoToFood, onOpenSettings, onOpenCoach }: HomePageProps) {
   const { settings, getPerformanceScore, streak, getTodayTotals, workoutSplit } = useApp()
   const totals = getTodayTotals()
   const performanceScore = getPerformanceScore()
@@ -608,6 +612,13 @@ export function HomePage({ onTabChange, onGoToFood }: HomePageProps) {
             <Flame className="h-3.5 w-3.5 text-orange-500" />
             <span className="text-xs font-semibold text-orange-500">{streak}d</span>
           </div>
+          <button
+            type="button"
+            onClick={() => onOpenSettings?.()}
+            className="flex h-9 w-9 items-center justify-center rounded-2xl border border-border bg-card text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-sm font-bold text-primary-foreground">
             {initials}
           </div>
@@ -697,6 +708,16 @@ export function HomePage({ onTabChange, onGoToFood }: HomePageProps) {
 
       <PushupChallengeCard />
       <DailyQuestCard />
+
+      {/* Floating Coach button */}
+      <button
+        type="button"
+        onClick={() => onOpenCoach?.()}
+        className="fixed bottom-24 right-5 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 shadow-lg shadow-primary/30 transition-all hover:opacity-90 active:scale-95"
+      >
+        <MessageCircle className="h-4 w-4 text-primary-foreground" />
+        <span className="text-xs font-bold text-primary-foreground">Coach</span>
+      </button>
     </motion.div>
   )
 }

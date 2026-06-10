@@ -2,90 +2,80 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronRight, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowLeft as ArrowLeftIcon, ArrowRight, X, Home, Dumbbell, Utensils, Trophy, LayoutGrid, Target, MessageCircle, Flame, CheckCircle2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
+const STORAGE_KEY = 'rise-tutorial-v2-seen'
+
+// Each step navigates to a real tab and points at something specific
 const STEPS = [
   {
-    icon: '👋',
-    label: 'Welcome',
-    title: "Hey! I'm Rize!",
-    message: "Your personal Rise coach. I'll walk you through the app so you can start crushing your goals.",
-    cta: "Let's go 🔥",
     tab: 'home',
-    accent: '#84cc16',
+    color: '#84cc16',
+    title: 'Welcome to RISE',
+    subtitle: 'Quick 5-step tour',
+    description: "We'll show you around in 30 seconds. Tap Next to begin.",
+    arrow: null,
+    highlight: null,
   },
   {
-    icon: '🏠',
-    label: 'Home',
-    title: 'Your Dashboard',
-    message: "Your rank, daily calories, streak, and today's workout — everything at a glance the second you open the app.",
-    cta: 'Got it',
     tab: 'home',
-    accent: '#84cc16',
+    color: '#84cc16',
+    title: 'This is your Home screen',
+    subtitle: 'Your daily summary',
+    description: 'At the top you can see your calories left for today, your streak, and your rank. Everything you need at a glance.',
+    arrow: 'up', // points up toward the content
+    highlight: null,
   },
   {
-    icon: '🍎',
-    label: 'Nutrition',
-    title: 'Track Your Food',
-    message: 'Search 200+ foods, scan a barcode, or snap a photo and let AI log it for you. No more guessing macros.',
-    cta: 'Nice',
-    tab: 'food',
-    accent: '#f97316',
-  },
-  {
-    icon: '🏋️',
-    label: 'Train',
-    title: 'Log Your Lifts',
-    message: 'Start a workout, log every set, and watch your PRs push your rank higher. Every rep counts.',
-    cta: 'Let\'s lift',
     tab: 'train',
-    accent: '#3b82f6',
+    color: '#3b82f6',
+    title: 'This is the Train page',
+    subtitle: 'Log your workouts here',
+    description: 'Tap "Start Workout" to begin a session. Log every set and rep. Your rank goes up as you get stronger.',
+    arrow: 'up',
+    highlight: null,
   },
   {
-    icon: '🏆',
-    label: 'Ranks',
-    title: 'Climb the Ranks',
-    message: 'You start at Iron and climb to Elite based on your actual lifts — not streaks, not steps. Real strength.',
-    cta: 'I want Elite',
-    tab: 'home',
-    accent: '#f59e0b',
+    tab: 'food',
+    color: '#f97316',
+    title: 'This is the Food page',
+    subtitle: 'Track what you eat',
+    description: 'Search for any food, scan a barcode, or take a photo. It automatically logs your calories and macros.',
+    arrow: 'up',
+    highlight: null,
   },
   {
-    icon: '⚡',
-    label: 'Coach',
-    title: "I'm Always Here",
-    message: "Tap the chat icon anytime to talk to me. I know your stats, your goals, and I'm available 24/7.",
-    cta: "Let's Rise 🚀",
+    tab: 'ranks',
+    color: '#f59e0b',
+    title: 'This is the Ranks page',
+    subtitle: 'See how strong you are',
+    description: 'You start at Iron and work your way up to Elite. Your rank is based on how much you actually lift — not steps or streaks.',
+    arrow: 'up',
+    highlight: null,
+  },
+  {
     tab: 'home',
-    accent: '#84cc16',
+    color: '#84cc16',
+    title: 'One last thing',
+    subtitle: 'Your AI Coach',
+    description: 'See the green Coach button at the bottom right? Tap it anytime to ask your AI coach anything — workouts, food, motivation.',
+    arrow: 'down', // points down toward the coach button
+    highlight: null,
   },
 ]
 
-const STORAGE_KEY = 'rise-tutorial-v1-seen'
+// Tab labels for the nav indicator
+const TAB_LABELS: Record<string, { label: string; icon: any; color: string }> = {
+  home:  { label: 'Home',  icon: Home,      color: '#84cc16' },
+  train: { label: 'Train', icon: Dumbbell,  color: '#3b82f6' },
+  food:  { label: 'Food',  icon: Utensils,  color: '#f97316' },
+  ranks: { label: 'Ranks', icon: Trophy,    color: '#f59e0b' },
+  more:  { label: 'More',  icon: LayoutGrid,color: '#a78bfa' },
+}
 
 interface AppTutorialProps {
   onTabChange: (tab: string) => void
-}
-
-function RizeFace({ size = 80, accent }: { size?: number; accent: string }) {
-  return (
-    <svg width={size} height={size * 1.15} viewBox="0 0 80 92" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="26" y="58" width="28" height="26" rx="10" fill={accent} />
-      <rect x="10" y="60" width="16" height="9" rx="4.5" fill={accent} transform="rotate(-20 10 60)" />
-      <rect x="54" y="52" width="16" height="9" rx="4.5" fill={accent} transform="rotate(-50 54 52)" />
-      <circle cx="40" cy="34" r="22" fill={accent} />
-      <ellipse cx="32" cy="26" rx="7" ry="4" fill="white" opacity="0.2" transform="rotate(-25 32 26)" />
-      <circle cx="31" cy="33" r="5.5" fill="white" />
-      <circle cx="49" cy="33" r="5.5" fill="white" />
-      <circle cx="32" cy="34" r="3" fill="#0f172a" />
-      <circle cx="50" cy="34" r="3" fill="#0f172a" />
-      <circle cx="33.2" cy="32.8" r="1.1" fill="white" />
-      <circle cx="51.2" cy="32.8" r="1.1" fill="white" />
-      <path d="M30 41 Q40 50 50 41" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-      <circle cx="24" cy="40" r="5" fill="#f97316" opacity="0.3" />
-      <circle cx="56" cy="40" r="5" fill="#f97316" opacity="0.3" />
-    </svg>
-  )
 }
 
 export function AppTutorial({ onTabChange }: AppTutorialProps) {
@@ -102,8 +92,7 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
 
   useEffect(() => {
     if (!visible) return
-    const tab = STEPS[current].tab
-    if (tab) onTabChange(tab)
+    onTabChange(STEPS[current].tab)
   }, [current, visible, onTabChange])
 
   const dismiss = () => {
@@ -131,143 +120,151 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
   const step = STEPS[current]
   const isLast = current === STEPS.length - 1
   const isFirst = current === 0
-  const progress = (current + 1) / STEPS.length
+  const tabMeta = TAB_LABELS[step.tab]
+  const TabIcon = tabMeta?.icon
 
   return (
     <AnimatePresence>
       {visible && (
+        // Semi-transparent overlay — you can SEE the app behind it
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 flex flex-col bg-background"
+          className="fixed inset-0 z-50 pointer-events-none"
         >
-          {/* Top bar */}
-          <div className="flex items-center justify-between px-6 pt-14 pb-4">
-            {/* Progress bar */}
-            <div className="flex-1 h-1 bg-border rounded-full mr-4 overflow-hidden">
-              <motion.div
-                className="h-full rounded-full"
-                style={{ backgroundColor: step.accent }}
-                animate={{ width: `${progress * 100}%` }}
-                transition={{ duration: 0.4, ease: 'easeOut' }}
-              />
-            </div>
+          {/* Dark gradient only at the bottom — keeps top content visible */}
+          <div className="absolute bottom-0 left-0 right-0 h-[55%] bg-gradient-to-t from-black/95 via-black/80 to-transparent pointer-events-auto" />
+
+          {/* Top skip button — always visible */}
+          <div className="absolute top-0 left-0 right-0 flex justify-end px-5 pt-14 pointer-events-auto">
             <button
+              type="button"
               onClick={dismiss}
-              className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-muted-foreground bg-secondary"
+              className="flex items-center gap-1.5 rounded-full bg-black/50 px-4 py-2 text-xs font-semibold text-white/80 backdrop-blur-sm border border-white/10"
             >
-              Skip <X className="h-3 w-3" />
+              Skip tour <X className="h-3 w-3" />
             </button>
           </div>
 
-          {/* Main content */}
-          <div className="flex-1 flex flex-col items-center justify-center px-8 pb-8">
+          {/* Arrow pointing UP at the page content */}
+          {step.arrow === 'up' && (
+            <motion.div
+              key={`arrow-up-${current}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: [0, -8, 0] }}
+              transition={{ delay: 0.3, duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
+              style={{ top: '38%' }}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <ArrowUp className="h-8 w-8 drop-shadow-lg" style={{ color: step.color }} strokeWidth={3} />
+                <ArrowUp className="h-6 w-6 opacity-50" style={{ color: step.color }} strokeWidth={3} />
+              </div>
+            </motion.div>
+          )}
+
+          {/* Arrow pointing DOWN toward coach button */}
+          {step.arrow === 'down' && (
+            <motion.div
+              key={`arrow-down-${current}`}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: [0, 8, 0] }}
+              transition={{ delay: 0.3, duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute right-8 pointer-events-none"
+              style={{ bottom: '52%' }}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <ArrowDown className="h-6 w-6 opacity-50" style={{ color: step.color }} strokeWidth={3} />
+                <ArrowDown className="h-8 w-8 drop-shadow-lg" style={{ color: step.color }} strokeWidth={3} />
+              </div>
+            </motion.div>
+          )}
+
+          {/* Bottom card — the actual tutorial text */}
+          <div className="absolute bottom-0 left-0 right-0 pointer-events-auto px-5 pb-12 pt-4">
+
+            {/* Which tab you're on */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`tab-${current}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center gap-2 mb-4"
+              >
+                <div
+                  className="flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold"
+                  style={{ backgroundColor: step.color + '25', color: step.color, border: `1px solid ${step.color}40` }}
+                >
+                  {TabIcon && <TabIcon className="h-3.5 w-3.5" />}
+                  {tabMeta?.label} page
+                </div>
+                <span className="text-xs text-white/40 font-medium">
+                  Step {current + 1} of {STEPS.length}
+                </span>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Progress dots */}
+            <div className="flex gap-1.5 mb-5">
+              {STEPS.map((s, i) => (
+                <motion.div
+                  key={i}
+                  animate={{ width: i === current ? 24 : 6, opacity: i <= current ? 1 : 0.25 }}
+                  transition={{ duration: 0.25 }}
+                  className="h-1.5 rounded-full"
+                  style={{ backgroundColor: i === current ? step.color : '#ffffff' }}
+                />
+              ))}
+            </div>
+
+            {/* Text content */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={current}
-                initial={{ opacity: 0, x: direction * 50 }}
+                initial={{ opacity: 0, x: direction * 30 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: direction * -50 }}
-                transition={{ type: 'spring', damping: 24, stiffness: 300 }}
-                className="flex flex-col items-center text-center w-full max-w-xs"
+                exit={{ opacity: 0, x: direction * -30 }}
+                transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+                className="mb-6"
               >
-                {/* Step label pill */}
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.05 }}
-                  className="mb-6 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest"
-                  style={{ backgroundColor: step.accent + '22', color: step.accent }}
-                >
-                  {step.label}
-                </motion.div>
-
-                {/* Mascot */}
-                <motion.div
-                  className="relative mb-8"
-                  animate={{ y: [0, -6, 0] }}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                >
-                  {/* Glow ring */}
-                  <div
-                    className="absolute inset-0 rounded-full blur-2xl opacity-30 scale-110"
-                    style={{ backgroundColor: step.accent }}
-                  />
-                  <RizeFace size={120} accent={step.accent} />
-
-                  {/* Emoji badge */}
-                  <motion.div
-                    key={`emoji-${current}`}
-                    initial={{ scale: 0, rotate: -15 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ delay: 0.15, type: 'spring', stiffness: 320 }}
-                    className="absolute -top-2 -right-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-card border border-border text-xl shadow-lg"
-                  >
-                    {step.icon}
-                  </motion.div>
-                </motion.div>
-
-                {/* Title */}
-                <motion.h1
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-3xl font-black tracking-tight text-foreground mb-4 leading-tight"
-                >
+                <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: step.color }}>
+                  {step.subtitle}
+                </p>
+                <h2 className="text-2xl font-black text-white leading-tight mb-3">
                   {step.title}
-                </motion.h1>
-
-                {/* Message */}
-                <motion.p
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.18 }}
-                  className="text-base text-muted-foreground leading-relaxed"
-                >
-                  {step.message}
-                </motion.p>
+                </h2>
+                <p className="text-base text-white/75 leading-relaxed">
+                  {step.description}
+                </p>
               </motion.div>
             </AnimatePresence>
-          </div>
 
-          {/* Bottom actions */}
-          <div className="px-6 pb-14 flex flex-col gap-3">
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={next}
-              className="w-full rounded-2xl py-4 text-base font-bold text-black shadow-lg transition-all"
-              style={{ backgroundColor: step.accent, boxShadow: `0 8px 24px ${step.accent}44` }}
-            >
-              {isLast ? "Let's Rise 🚀" : step.cta}
-              {!isLast && <ChevronRight className="inline ml-1 h-5 w-5" />}
-            </motion.button>
-
-            {!isFirst && (
-              <button
-                onClick={prev}
-                className="text-sm text-muted-foreground py-1 font-medium"
-              >
-                ← Back
-              </button>
-            )}
-
-            {/* Step dots */}
-            <div className="flex justify-center gap-2 mt-1">
-              {STEPS.map((s, i) => (
-                <button key={i} onClick={() => { setDirection(i > current ? 1 : -1); setCurrent(i) }}>
-                  <motion.div
-                    animate={{
-                      width: i === current ? 20 : 6,
-                      opacity: i === current ? 1 : 0.3,
-                    }}
-                    transition={{ duration: 0.25 }}
-                    className="h-1.5 rounded-full"
-                    style={{ backgroundColor: i === current ? step.accent : '#888' }}
-                  />
+            {/* Buttons */}
+            <div className="flex gap-3">
+              {!isFirst && (
+                <button
+                  type="button"
+                  onClick={prev}
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white"
+                >
+                  <ArrowLeftIcon className="h-5 w-5" />
                 </button>
-              ))}
+              )}
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.97 }}
+                onClick={next}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-black shadow-xl"
+                style={{ backgroundColor: step.color, boxShadow: `0 8px 30px ${step.color}55` }}
+              >
+                {isLast ? (
+                  <><CheckCircle2 className="h-5 w-5" /> Got it, let's go!</>
+                ) : (
+                  <><ArrowRight className="h-5 w-5" /> Next</>
+                )}
+              </motion.button>
             </div>
           </div>
         </motion.div>

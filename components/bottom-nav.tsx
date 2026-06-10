@@ -1,6 +1,6 @@
 'use client'
 
-import { Home, Utensils, Dumbbell, LayoutGrid, Target } from 'lucide-react'
+import { Home, Utensils, Dumbbell, LayoutGrid, Trophy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 
@@ -10,11 +10,11 @@ interface BottomNavProps {
 }
 
 const tabs = [
-  { id: 'home',   icon: Home,       label: 'Home' },
-  { id: 'train',  icon: Dumbbell,   label: 'Train' },
-  { id: 'food',   icon: Utensils,   label: 'Food' },
-  { id: 'goals',  icon: Target,     label: 'Goals' },
-  { id: 'more',   icon: LayoutGrid, label: 'More' },
+  { id: 'train', icon: Dumbbell,   label: 'Train' },
+  { id: 'food',  icon: Utensils,   label: 'Food' },
+  { id: 'home',  icon: Home,       label: 'Home',  center: true },
+  { id: 'ranks', icon: Trophy,     label: 'Ranks' },
+  { id: 'more',  icon: LayoutGrid, label: 'More' },
 ]
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
@@ -25,6 +25,35 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
           {tabs.map(tab => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
+
+            if (tab.center) {
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => onTabChange(tab.id)}
+                  className="relative -mt-5 flex flex-col items-center justify-center"
+                >
+                  <motion.div
+                    className={cn(
+                      'flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg transition-all',
+                      isActive
+                        ? 'bg-primary shadow-primary/40'
+                        : 'bg-primary/80 hover:bg-primary shadow-primary/20'
+                    )}
+                    whileTap={{ scale: 0.92 }}
+                  >
+                    <Icon className="h-6 w-6 text-primary-foreground" />
+                  </motion.div>
+                  <span className={cn(
+                    'mt-1 text-[10px] font-semibold',
+                    isActive ? 'text-primary' : 'text-muted-foreground'
+                  )}>
+                    {tab.label}
+                  </span>
+                </button>
+              )
+            }
 
             return (
               <button

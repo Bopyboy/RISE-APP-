@@ -26,35 +26,6 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
 
-            if (tab.center) {
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => onTabChange(tab.id)}
-                  className="relative -mt-5 flex flex-col items-center justify-center"
-                >
-                  <motion.div
-                    className={cn(
-                      'flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg transition-all',
-                      isActive
-                        ? 'bg-primary shadow-primary/40'
-                        : 'bg-primary/80 hover:bg-primary shadow-primary/20'
-                    )}
-                    whileTap={{ scale: 0.92 }}
-                  >
-                    <Icon className="h-6 w-6 text-primary-foreground" />
-                  </motion.div>
-                  <span className={cn(
-                    'mt-1 text-[10px] font-semibold',
-                    isActive ? 'text-primary' : 'text-muted-foreground'
-                  )}>
-                    {tab.label}
-                  </span>
-                </button>
-              )
-            }
-
             return (
               <button
                 key={tab.id}
@@ -62,14 +33,23 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                 onClick={() => onTabChange(tab.id)}
                 className={cn(
                   'relative flex flex-col items-center justify-center px-4 py-2 transition-colors',
-                  isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                  tab.center
+                    ? isActive ? 'text-primary' : 'text-primary/70 hover:text-primary'
+                    : isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                {isActive && (
+                {isActive && !tab.center && (
                   <motion.div
                     layoutId="activeTab"
                     className="absolute inset-0 rounded-xl bg-primary/10"
                     transition={{ type: 'spring', bounce: 0.15, duration: 0.5 }}
+                  />
+                )}
+                {isActive && tab.center && (
+                  <motion.div
+                    className="absolute inset-0 rounded-xl bg-primary/10"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                   />
                 )}
                 <Icon className={cn('relative h-5 w-5', isActive && 'scale-110')} />

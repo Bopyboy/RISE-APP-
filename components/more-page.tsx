@@ -1,20 +1,21 @@
 'use client'
 
 import { useState } from 'react'
-import { MessageCircle, Users, ShoppingBag, Settings, ChevronRight } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { MessageCircle, Users, ShoppingBag, Settings, Target, ChevronRight } from 'lucide-react'
 import { ChatPage } from '@/components/chat-page'
 import { FriendsPage } from '@/components/friends-page'
 import { ShopPage } from '@/components/shop-page'
 import { SettingsPage } from '@/components/settings-page'
+import { GoalsPage } from '@/components/goals-page'
 
-type MoreSection = 'menu' | 'coach' | 'friends' | 'shop' | 'settings'
+type MoreSection = 'menu' | 'coach' | 'friends' | 'shop' | 'settings' | 'goals'
 
 const MENU = [
-  { id: 'coach' as const, label: 'Rise Coach', desc: 'AI fitness advice', icon: MessageCircle },
-  { id: 'friends' as const, label: 'Friends', desc: 'Leaderboards & codes', icon: Users },
-  { id: 'shop' as const, label: 'Shop', desc: 'Badges, banners, XP', icon: ShoppingBag },
-  { id: 'settings' as const, label: 'Settings', desc: 'Profile, goals, theme', icon: Settings },
+  { id: 'goals'    as const, label: 'Goals',      desc: 'Set and track your goals',    icon: Target },
+  { id: 'coach'    as const, label: 'Rise Coach',  desc: 'AI fitness advice',           icon: MessageCircle },
+  { id: 'friends'  as const, label: 'Friends',     desc: 'Leaderboards & codes',        icon: Users },
+  { id: 'shop'     as const, label: 'Shop',        desc: 'Badges, banners, XP',         icon: ShoppingBag },
+  { id: 'settings' as const, label: 'Settings',    desc: 'Profile, goals, theme',       icon: Settings },
 ]
 
 export function MorePage() {
@@ -30,9 +31,10 @@ export function MorePage() {
         >
           ← Back
         </button>
-        {section === 'coach' && <ChatPage />}
-        {section === 'friends' && <FriendsPage />}
-        {section === 'shop' && <ShopPage />}
+        {section === 'goals'    && <GoalsPage />}
+        {section === 'coach'    && <ChatPage />}
+        {section === 'friends'  && <FriendsPage />}
+        {section === 'shop'     && <ShopPage />}
         {section === 'settings' && <SettingsPage />}
       </div>
     )
@@ -42,7 +44,7 @@ export function MorePage() {
     <div className="space-y-4 pb-20">
       <div>
         <h1 className="text-2xl font-bold text-foreground">More</h1>
-        <p className="text-sm text-muted-foreground">Coach, social, shop & settings</p>
+        <p className="text-sm text-muted-foreground">Goals, coach, social & settings</p>
       </div>
       <div className="space-y-2">
         {MENU.map(item => {

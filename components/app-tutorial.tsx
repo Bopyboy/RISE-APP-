@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, ArrowLeft as ArrowLeftIcon, X, CheckCircle2, Star } from 'lucide-react'
+import { ArrowRight, ArrowLeft as ArrowLeftIcon, X, CheckCircle2, Star, MousePointerClick } from 'lucide-react'
 import { useApp } from '@/lib/app-context'
 
-const STORAGE_KEY = 'rise-tutorial-v6-seen'
+const STORAGE_KEY = 'rise-tutorial-v7-seen'
 
 // ─── Mascot ───────────────────────────────────────────────────────────────────
 
@@ -19,23 +19,18 @@ function RizeFace({ size = 100, accent, expression = 'happy' }: {
     <svg width={size} height={size * 1.2} viewBox="0 0 80 96" fill="none" xmlns="http://www.w3.org/2000/svg">
       <ellipse cx="40" cy="93" rx="18" ry="3" fill="black" opacity="0.15" />
       <rect x="25" y="60" width="30" height="28" rx="11" fill={accent} />
-      {/* Left arm relaxed */}
       <rect x="8" y="64" width="17" height="9" rx="4.5" fill={accent} transform="rotate(-15 8 64)" />
-      {/* Right arm changes */}
       {expression === 'point_up'    && <rect x="54" y="34" width="21" height="9" rx="4.5" fill={accent} transform="rotate(-68 54 34)" />}
       {expression === 'point_down'  && <rect x="54" y="72" width="21" height="9" rx="4.5" fill={accent} transform="rotate(32 54 72)" />}
       {expression === 'point_right' && <rect x="57" y="57" width="21" height="9" rx="4.5" fill={accent} transform="rotate(-18 57 57)" />}
       {expression === 'point_left'  && <rect x="2"  y="54" width="21" height="9" rx="4.5" fill={accent} transform="rotate(18 2 54)" />}
       {!pointing && <rect x="54" y="56" width="17" height="9" rx="4.5" fill={accent} transform="rotate(-50 54 56)" />}
-      {/* Fingertip */}
       {expression === 'point_up'    && <circle cx="62" cy="24" r="5" fill={accent} />}
       {expression === 'point_down'  && <circle cx="69" cy="84" r="5" fill={accent} />}
       {expression === 'point_right' && <circle cx="78" cy="53" r="5" fill={accent} />}
       {expression === 'point_left'  && <circle cx="2"  cy="48" r="5" fill={accent} />}
-      {/* Head */}
       <circle cx="40" cy="35" r="23" fill={accent} />
       <ellipse cx="31" cy="26" rx="8" ry="4.5" fill="white" opacity="0.18" transform="rotate(-25 31 26)" />
-      {/* Eyes */}
       <circle cx="31" cy="34" r="6" fill="white" />
       <circle cx="49" cy="34" r="6" fill="white" />
       {(expression === 'excited' || pointing) ? (
@@ -58,7 +53,6 @@ function RizeFace({ size = 100, accent, expression = 'happy' }: {
           <circle cx="51.3" cy="33.5" r="1.2" fill="white" />
         </>
       )}
-      {/* Mouth */}
       {(expression === 'excited') ? (
         <ellipse cx="40" cy="44" rx="7" ry="5" fill="white" opacity="0.9" />
       ) : pointing ? (
@@ -66,10 +60,8 @@ function RizeFace({ size = 100, accent, expression = 'happy' }: {
       ) : (
         <path d="M29 43 Q40 53 51 43" stroke="white" strokeWidth="2.8" strokeLinecap="round" fill="none" />
       )}
-      {/* Cheeks */}
       <circle cx="22" cy="41" r="5.5" fill="#f97316" opacity="0.28" />
       <circle cx="58" cy="41" r="5.5" fill="#f97316" opacity="0.28" />
-      {/* Cool eyebrows */}
       {expression === 'cool' && (
         <>
           <path d="M25 27 Q31 24 37 27" stroke="#0f172a" strokeWidth="2.2" strokeLinecap="round" fill="none" />
@@ -107,6 +99,49 @@ function Confetti() {
   )
 }
 
+// ─── DOM targeting helpers ────────────────────────────────────────────────────
+// We find live elements in the rendered app by walking the DOM. This way the
+// spotlight always lands EXACTLY on the real button, no hardcoded coordinates.
+
+type Finder = () => HTMLElement | null
+
+const findByText = (selector: string, text: string, root: ParentNode = document): HTMLElement | null => {
+  const needle = text.toLowerCase().trim()
+  const nodes = Array.from(root.querySelectorAll<HTMLElement>(selector))
+  return nodes.find(n => (n.textContent || '').toLowerCase().trim() === needle)
+      ?? nodes.find(n => (n.textContent || '').toLowerCase().includes(needle))
+      ?? null
+}
+
+const findNavButton = (label: string): HTMLElement | null => {
+  const nav = document.querySelector('nav')
+  if (!nav) return null
+  return findByText('button', label, nav)
+}
+
+// The Breakfast card's "Add" button: find the heading "Breakfast", walk up to
+// its card container, then find the Add button inside it.
+const findBreakfastAdd: Finder = () => {
+  const headings = Array.from(document.querySelectorAll<HTMLElement>('h3'))
+  const heading = headings.find(h => (h.textContent || '').trim().toLowerCase() === 'breakfast')
+  if (!heading) return null
+  const card = heading.closest<HTMLElement>('div.rounded-2xl, [class*="rounded-2xl"]') || heading.parentElement?.parentElement?.parentElement
+  if (!card) return null
+  return findByText('button', 'Add', card)
+}
+
+const findCoachFab: Finder = () => {
+  // RizeTip floating button — find a fixed-positioned button outside of <nav>
+  const candidates = Array.from(document.querySelectorAll<HTMLElement>('button'))
+  return candidates.find(b => {
+    if (b.closest('nav')) return false
+    const cs = getComputedStyle(b)
+    if (cs.position !== 'fixed') return false
+    const r = b.getBoundingClientRect()
+    return r.bottom > window.innerHeight - 220 && r.right > window.innerWidth - 160 && r.width < 200
+  }) || null
+}
+
 // ─── Step config ──────────────────────────────────────────────────────────────
 
 interface Step {
@@ -115,146 +150,110 @@ interface Step {
   title: string
   body: string
   expression: Expression
-  // Mascot position: % of viewport (center point)
-  mascot: { x: number; y: number }
-  // Spotlight in % of viewport. null = none
-  spot: { t: number; l: number; w: number; h: number; r: number } | null
-  // Scroll the window to this px offset BEFORE showing spotlight (0 = scroll to top)
-  scrollTo: number
+  // DOM finder for the element to spotlight. null = no spotlight (centered card).
+  find: Finder | null
+  // If true, the user MUST click the highlighted element to advance.
+  requireClick?: boolean
+  // Optional: wait for this condition (polled) before advancing automatically.
+  waitFor?: () => boolean
+  // Where the mascot sits relative to the spotlight: 'above' | 'below' | 'left' | 'right'
+  mascotSide?: 'above' | 'below' | 'left' | 'right'
 }
 
-// ─── All steps ────────────────────────────────────────────────────────────────
-// Measurements based on:
-//  - App page: mx-auto max-w-md px-4 pt-6
-//  - Bottom nav: fixed, ~88px tall at bottom
-//  - Viewport 844px tall (iPhone 14) → 1vh = 8.44px
-//  - Home page scroll starts at 0 for all home steps
-//  - Food page: calorie card ~250px, then AI banner ~70px, then Breakfast at ~520px from top
-//    → scroll to 400 to bring Breakfast Add button into view
-//  - Train page: header+tabs+plan card+meal link+form card ≈ 480px → Start button at ~550px
-//    → scroll to 380 to bring first Start button into view
-
 const STEPS: Step[] = [
-  // 0 — Welcome, no spotlight
   {
-    tab: 'home', color: '#84cc16', scrollTo: 0,
-    title: "Hey! I'm Rize — your personal coach!",
-    body: "I'm going to walk you through the whole app right now so you know exactly what to do. It only takes 30 seconds!",
+    tab: 'home', color: '#84cc16',
+    title: "Hey! I'm Rize — your coach!",
+    body: "I'll walk you through the app and help you log your first meal right now. Takes 30 seconds. Tap Next to start!",
     expression: 'excited',
-    mascot: { x: 50, y: 35 },
-    spot: null,
+    find: null,
   },
-  // 1 — Home: header
   {
-    tab: 'home', color: '#84cc16', scrollTo: 0,
-    title: 'Your name and daily streak',
-    body: 'Up here is your name, today\'s date, and your streak — that\'s how many days in a row you\'ve used RISE!',
+    tab: 'home', color: '#84cc16',
+    title: 'This is your Home base',
+    body: "Your name, streak and today's calories live here. You'll come back here every day. Now let's go log a meal — tap Next!",
     expression: 'point_down',
-    mascot: { x: 50, y: 22 },
-    spot: { t: 6, l: 3, w: 94, h: 10, r: 14 },
+    find: null,
   },
-  // 2 — Home: calorie card
   {
-    tab: 'home', color: '#84cc16', scrollTo: 0,
-    title: 'Your calories for today',
-    body: 'This big number is how many calories you can still eat today. It counts down every time you log a meal.',
+    tab: 'home', color: '#f97316',
+    title: 'Tap the FOOD button',
+    body: "See it highlighted at the bottom? Tap it now to open your meal log.",
     expression: 'point_down',
-    mascot: { x: 50, y: 21 },
-    spot: { t: 24, l: 3, w: 94, h: 20, r: 18 },
+    find: () => findNavButton('Food'),
+    requireClick: true,
+    mascotSide: 'above',
   },
-  // 3 — Home: Log Meal + Train shortcuts
   {
-    tab: 'home', color: '#84cc16', scrollTo: 0,
-    title: 'Your two main shortcuts',
-    body: 'The GREEN button logs your food. The other button takes you to today\'s workout. You\'ll tap one of these every single day!',
-    expression: 'point_down',
-    mascot: { x: 50, y: 38 },
-    spot: { t: 44, l: 3, w: 94, h: 11, r: 18 },
-  },
-  // 4 — Home: rank card
-  {
-    tab: 'home', color: '#f59e0b', scrollTo: 0,
-    title: 'Your rank — starts at IRON',
-    body: 'Everyone starts at Iron rank. Log your workouts and get stronger, and your rank climbs all the way up to ELITE!',
-    expression: 'point_down',
-    mascot: { x: 50, y: 49 },
-    spot: { t: 55, l: 3, w: 94, h: 17, r: 18 },
-  },
-  // 5 — Bottom nav overview
-  {
-    tab: 'home', color: '#ffffff', scrollTo: 0,
-    title: 'The 5 buttons at the bottom',
-    body: 'These take you everywhere in the app — Train, Food, Home, Ranks, and More. I\'ll take you to each one now!',
-    expression: 'point_down',
-    mascot: { x: 50, y: 74 },
-    spot: { t: 88, l: 2, w: 96, h: 11, r: 20 },
-  },
-  // 6 — Navigate to Food, scroll to top, show food tab in nav
-  {
-    tab: 'food', color: '#f97316', scrollTo: 0,
-    title: 'FOOD page — this is where you log meals',
-    body: 'You\'re now on the Food page. Every time you eat something, come here. Tap the FOOD button at the bottom to get back here anytime!',
-    expression: 'point_down',
-    mascot: { x: 29, y: 74 },
-    spot: { t: 88, l: 20, w: 20, h: 11, r: 20 },
-  },
-  // 7 — Food: scroll down to show the Breakfast "+ Add" button
-  {
-    tab: 'food', color: '#f97316', scrollTo: 420,
-    title: 'Tap "+ Add" to log what you eat',
-    body: 'Each meal has an "+ Add" button right here. Tap it to search for any food by name, or scan the barcode on the package!',
+    tab: 'food', color: '#f97316',
+    title: 'Tap "+ Add" on Breakfast',
+    body: "This opens the food picker. Tap it now and pick anything — even a guess works for this tour!",
     expression: 'point_right',
-    mascot: { x: 12, y: 52 },
-    spot: { t: 47, l: 62, w: 34, h: 8, r: 12 },
+    find: findBreakfastAdd,
+    requireClick: true,
+    mascotSide: 'left',
   },
-  // 8 — Navigate to Train, scroll to top, show train tab in nav
   {
-    tab: 'train', color: '#3b82f6', scrollTo: 0,
-    title: 'TRAIN page — log your workouts',
-    body: 'You\'re on the Train page now. When you go to the gym, come here first. Tap TRAIN at the bottom left to get here!',
+    tab: 'food', color: '#f97316',
+    title: 'Pick any food to log it!',
+    body: "Search a food or choose from a category, then hit Add. I'll wait right here…",
+    expression: 'excited',
+    find: null,
+    // Advance automatically the moment a meal entry exists.
+    waitFor: () => true, // handled specially in component via useApp
+  },
+  {
+    tab: 'food', color: '#84cc16',
+    title: "Boom — first meal logged! 🎉",
+    body: "That's it. Every meal works the same way. Now let me show you the rest real quick.",
+    expression: 'excited',
+    find: null,
+  },
+  {
+    tab: 'home', color: '#3b82f6',
+    title: 'TRAIN is for workouts',
+    body: "Tap the TRAIN button at the bottom-left to see how it works.",
     expression: 'point_down',
-    mascot: { x: 12, y: 74 },
-    spot: { t: 88, l: 2, w: 20, h: 11, r: 20 },
+    find: () => findNavButton('Train'),
+    requireClick: true,
+    mascotSide: 'above',
   },
-  // 9 — Train: scroll down to the workout cards with Start buttons
   {
-    tab: 'train', color: '#3b82f6', scrollTo: 400,
-    title: 'Find today\'s workout and tap START',
-    body: 'Scroll down to see your workout plan. Each day has a START button — tap it and the app walks you through every exercise, set, and rep!',
+    tab: 'train', color: '#3b82f6',
+    title: 'Every day has a START button',
+    body: "Scroll down here and tap START on today's workout — I'll walk you through every set. Hit Next when you're ready.",
+    expression: 'point_down',
+    find: null,
+  },
+  {
+    tab: 'ranks', color: '#f59e0b',
+    title: 'RANKS shows your strength',
+    body: "Tap RANKS at the bottom to peek at your rank screen.",
+    expression: 'point_down',
+    find: () => findNavButton('Ranks'),
+    requireClick: true,
+    mascotSide: 'above',
+  },
+  {
+    tab: 'more', color: '#a78bfa',
+    title: 'Everything else lives in MORE',
+    body: "Goals, settings, friends, AI chat — tap MORE to open it.",
+    expression: 'point_down',
+    find: () => findNavButton('More'),
+    requireClick: true,
+    mascotSide: 'above',
+  },
+  {
+    tab: 'home', color: '#84cc16',
+    title: 'Your AI Coach is one tap away',
+    body: "That floating button is me! Tap it any time for advice on food, training, or motivation. Hit Next to finish setup!",
     expression: 'point_right',
-    mascot: { x: 12, y: 44 },
-    spot: { t: 38, l: 55, w: 42, h: 9, r: 14 },
-  },
-  // 10 — Ranks tab
-  {
-    tab: 'ranks', color: '#f59e0b', scrollTo: 0,
-    title: 'RANKS — track your strength score',
-    body: 'This page shows your rank, your personal records on every lift, and how close you are to the next rank!',
-    expression: 'point_down',
-    mascot: { x: 71, y: 74 },
-    spot: { t: 88, l: 62, w: 20, h: 11, r: 20 },
-  },
-  // 11 — More tab
-  {
-    tab: 'more', color: '#a78bfa', scrollTo: 0,
-    title: 'MORE — goals, settings & everything else',
-    body: 'Tap More for your Goals tracker, Settings, Friends leaderboard, and your AI coach chat. Everything extra lives here!',
-    expression: 'point_down',
-    mascot: { x: 88, y: 74 },
-    spot: { t: 88, l: 80, w: 18, h: 11, r: 20 },
-  },
-  // 12 — Back to home, show Coach FAB
-  {
-    tab: 'home', color: '#84cc16', scrollTo: 0,
-    title: 'Your AI Coach button',
-    body: 'See that green COACH button at the bottom right? Tap it ANY time to ask me anything — what to eat, how to train, motivation. I\'m always here!',
-    expression: 'point_right',
-    mascot: { x: 40, y: 83 },
-    spot: { t: 81, l: 68, w: 28, h: 7, r: 99 },
+    find: findCoachFab,
+    mascotSide: 'left',
   },
 ]
 
-// ─── PR entry ─────────────────────────────────────────────────────────────────
+// ─── PR entry overlay (unchanged) ─────────────────────────────────────────────
 
 const LIFTS = [
   { id: 'bench',    label: 'Bench Press (lbs)',  group: 'chest' as const, placeholder: 'e.g. 135' },
@@ -357,35 +356,131 @@ interface AppTutorialProps {
   onTabChange: (tab: string) => void
 }
 
+interface Rect { top: number; left: number; width: number; height: number }
+
 export function AppTutorial({ onTabChange }: AppTutorialProps) {
+  const { nutrition } = useApp()
   const [phase, setPhase] = useState<'tutorial' | 'pr' | 'done'>('done')
   const [current, setCurrent] = useState(0)
   const [dir, setDir] = useState(1)
-  const [spotReady, setSpotReady] = useState(false)
-  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [rect, setRect] = useState<Rect | null>(null)
+  const targetRef = useRef<HTMLElement | null>(null)
+  const clickHandlerRef = useRef<((e: Event) => void) | null>(null)
+
+  // Total meal entries — used to detect "user logged a meal" for the wait step.
+  const totalEntries =
+    nutrition.meals.breakfast.length +
+    nutrition.meals.lunch.length +
+    nutrition.meals.dinner.length +
+    nutrition.meals.snacks.length
+  const baselineEntriesRef = useRef(totalEntries)
 
   useEffect(() => {
     try { if (!localStorage.getItem(STORAGE_KEY)) setPhase('tutorial') } catch {}
   }, [])
 
-  // When the step changes: switch tab first, then scroll, then show spotlight
+  const goNext = useCallback(() => {
+    setCurrent(c => {
+      if (c < STEPS.length - 1) { setDir(1); return c + 1 }
+      setPhase('pr')
+      return c
+    })
+  }, [])
+
+  const goPrev = useCallback(() => {
+    setCurrent(c => (c > 0 ? (setDir(-1), c - 1) : c))
+  }, [])
+
+  // Detach any click handler attached to a previous target.
+  const detachClick = useCallback(() => {
+    if (targetRef.current && clickHandlerRef.current) {
+      targetRef.current.removeEventListener('click', clickHandlerRef.current, true)
+    }
+    targetRef.current = null
+    clickHandlerRef.current = null
+  }, [])
+
+  // Effect: when step changes — switch tab, then poll for target, scroll into view, attach listeners.
   useEffect(() => {
     if (phase !== 'tutorial') return
     const step = STEPS[current]
-
-    setSpotReady(false)
     onTabChange(step.tab)
+    detachClick()
+    setRect(null)
 
-    // Give the page a moment to render after tab switch, then scroll
-    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current)
-    scrollTimerRef.current = setTimeout(() => {
-      window.scrollTo({ top: step.scrollTo, behavior: 'smooth' })
-      // Wait for scroll to finish before lighting up the spotlight
-      setTimeout(() => setSpotReady(true), step.scrollTo > 0 ? 500 : 80)
-    }, 200)
+    // Snapshot baseline entry count when entering the "pick a food" wait step.
+    if (current === 4) {
+      baselineEntriesRef.current = totalEntries
+    }
 
-    return () => { if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current) }
+    if (!step.find) {
+      // Centered card step (no DOM target). Scroll to top of page.
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+
+    let cancelled = false
+    let pollCount = 0
+    let raf = 0
+
+    const lockOn = (el: HTMLElement) => {
+      targetRef.current = el
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      // Wait for scroll to settle then measure
+      window.setTimeout(() => {
+        if (cancelled) return
+        const r = el.getBoundingClientRect()
+        setRect({ top: r.top, left: r.left, width: r.width, height: r.height })
+      }, 450)
+
+      if (step.requireClick) {
+        const handler = () => {
+          // Defer a tick so the click's own state updates happen first.
+          window.setTimeout(() => goNext(), 50)
+        }
+        clickHandlerRef.current = handler
+        el.addEventListener('click', handler, true)
+      }
+    }
+
+    const poll = () => {
+      if (cancelled) return
+      const el = step.find!()
+      if (el) { lockOn(el); return }
+      pollCount++
+      if (pollCount > 60) return // ~3s — give up and just show text
+      raf = window.setTimeout(poll, 50) as unknown as number
+    }
+    poll()
+
+    // Re-measure on scroll/resize while the target is live.
+    const remeasure = () => {
+      if (!targetRef.current) return
+      const r = targetRef.current.getBoundingClientRect()
+      setRect({ top: r.top, left: r.left, width: r.width, height: r.height })
+    }
+    window.addEventListener('scroll', remeasure, true)
+    window.addEventListener('resize', remeasure)
+
+    return () => {
+      cancelled = true
+      if (raf) clearTimeout(raf)
+      window.removeEventListener('scroll', remeasure, true)
+      window.removeEventListener('resize', remeasure)
+      detachClick()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current, phase, onTabChange])
+
+  // Auto-advance from the "pick a food" step the moment a new entry is added.
+  useEffect(() => {
+    if (phase !== 'tutorial') return
+    if (current !== 4) return
+    if (totalEntries > baselineEntriesRef.current) {
+      const t = window.setTimeout(() => goNext(), 350)
+      return () => clearTimeout(t)
+    }
+  }, [totalEntries, current, phase, goNext])
 
   const finish = () => {
     try { localStorage.setItem(STORAGE_KEY, 'seen') } catch {}
@@ -394,20 +489,40 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
     onTabChange('home')
   }
 
-  const next = () => {
-    if (current < STEPS.length - 1) { setDir(1); setCurrent(c => c + 1) }
-    else setPhase('pr')
-  }
-  const prev = () => {
-    if (current > 0) { setDir(-1); setCurrent(c => c - 1) }
-  }
-
   if (phase === 'pr') return <AnimatePresence><PREntryOverlay onComplete={finish} /></AnimatePresence>
   if (phase !== 'tutorial') return null
 
   const step = STEPS[current]
   const isFirst = current === 0
   const isLast = current === STEPS.length - 1
+  const isWaitingForUserAction = !!step.requireClick || current === 4
+
+  // Compute mascot position from spotlight rect (with screen-edge padding).
+  const VW = typeof window !== 'undefined' ? window.innerWidth : 390
+  const VH = typeof window !== 'undefined' ? window.innerHeight : 844
+  const MASCOT = 90
+  let mascotStyle: React.CSSProperties = { left: '50%', top: '32%', transform: 'translate(-50%, -50%)' }
+  if (rect && step.find) {
+    const side = step.mascotSide || 'above'
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    let mx = cx, my = cy
+    const GAP = 70
+    if (side === 'above')  { my = Math.max(80, rect.top - GAP) }
+    if (side === 'below')  { my = Math.min(VH - 280, rect.top + rect.height + GAP) }
+    if (side === 'left')   { mx = Math.max(70, rect.left - GAP); my = cy }
+    if (side === 'right')  { mx = Math.min(VW - 70, rect.left + rect.width + GAP); my = cy }
+    mascotStyle = { left: mx, top: my, transform: 'translate(-50%, -50%)' }
+  }
+
+  // Spotlight rect (with a little padding) — px-based so it always tracks the real element.
+  const PAD = 8
+  const spot = rect ? {
+    top: rect.top - PAD,
+    left: rect.left - PAD,
+    width: rect.width + PAD * 2,
+    height: rect.height + PAD * 2,
+  } : null
 
   return (
     <AnimatePresence>
@@ -416,12 +531,22 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
         className="fixed inset-0 z-50 overflow-hidden"
         style={{ pointerEvents: 'none' }}>
 
-        {/* Bottom gradient panel */}
-        <div className="absolute bottom-0 left-0 right-0 h-[50%] bg-gradient-to-t from-black/97 via-black/88 to-transparent"
-          style={{ pointerEvents: 'auto' }} />
-
-        {/* Top fade */}
-        <div className="absolute top-0 left-0 right-0 h-[18%] bg-gradient-to-b from-black/55 to-transparent" />
+        {/* SVG dim layer with a hole punched over the spotlight so the target stays clickable */}
+        <svg className="absolute inset-0 h-full w-full" style={{ pointerEvents: 'none' }}>
+          <defs>
+            <mask id="rize-tut-mask">
+              <rect width="100%" height="100%" fill="white" />
+              {spot && (
+                <rect
+                  x={spot.left} y={spot.top}
+                  width={spot.width} height={spot.height}
+                  rx={16} ry={16} fill="black"
+                />
+              )}
+            </mask>
+          </defs>
+          <rect width="100%" height="100%" fill="rgba(0,0,0,0.72)" mask="url(#rize-tut-mask)" />
+        </svg>
 
         {/* Skip */}
         <div className="absolute top-0 left-0 right-0 flex justify-end px-5 pt-14" style={{ pointerEvents: 'auto' }}>
@@ -431,66 +556,69 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
           </button>
         </div>
 
-        {/* Spotlight — only shown after scroll settles */}
-        <AnimatePresence mode="wait">
-          {step.spot && spotReady && (
-            <motion.div
-              key={`spot-${current}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.28 }}
-              className="absolute pointer-events-none"
-              style={{
-                top: `${step.spot.t}vh`,
-                left: `${step.spot.l}vw`,
-                width: `${step.spot.w}vw`,
-                height: `${step.spot.h}vh`,
-                borderRadius: step.spot.r,
-                border: `3px solid ${step.color}`,
-                boxShadow: `0 0 0 5px ${step.color}28, 0 0 32px 6px ${step.color}55`,
-              }}
-            />
-          )}
-        </AnimatePresence>
+        {/* Animated spotlight ring */}
+        {spot && (
+          <motion.div
+            key={`spot-${current}`}
+            initial={{ opacity: 0, scale: 1.15 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 280 }}
+            className="absolute pointer-events-none"
+            style={{
+              top: spot.top, left: spot.left, width: spot.width, height: spot.height,
+              borderRadius: 16,
+              border: `3px solid ${step.color}`,
+              boxShadow: `0 0 0 4px ${step.color}30, 0 0 40px 8px ${step.color}66`,
+            }}
+          />
+        )}
 
-        {/* Mascot — bounces into its unique position each step */}
+        {/* Pulsing tap hint on click-required steps */}
+        {spot && step.requireClick && (
+          <motion.div
+            className="absolute pointer-events-none flex items-center justify-center"
+            style={{
+              top: spot.top + spot.height / 2 - 18,
+              left: spot.left + spot.width / 2 - 18,
+              width: 36, height: 36,
+            }}
+            animate={{ scale: [1, 1.35, 1], opacity: [0.9, 0.4, 0.9] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
+          >
+            <MousePointerClick className="h-7 w-7" style={{ color: step.color }} />
+          </motion.div>
+        )}
+
+        {/* Mascot — bounces near the highlighted element */}
         <AnimatePresence mode="wait">
           <motion.div
-            key={`mascot-${current}`}
+            key={`mascot-${current}-${rect ? '1' : '0'}`}
             className="absolute pointer-events-none z-[65]"
-            style={{
-              left: `${step.mascot.x}vw`,
-              top:  `${step.mascot.y}vh`,
-              transform: 'translate(-50%, -50%)',
-            }}
-            initial={{ opacity: 0, scale: 0.2, y: 50 }}
-            animate={{ opacity: 1, scale: 1, y: [0, -10, 0] }}
-            exit={{ opacity: 0, scale: 0.3, y: -30 }}
+            style={mascotStyle}
+            initial={{ opacity: 0, scale: 0.3 }}
+            animate={{ opacity: 1, scale: 1, y: [0, -8, 0] }}
+            exit={{ opacity: 0, scale: 0.3 }}
             transition={{
-              opacity: { duration: 0.22 },
-              scale:   { duration: 0.42, type: 'spring', bounce: 0.55 },
-              y:       { duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 },
+              opacity: { duration: 0.25 },
+              scale:   { duration: 0.45, type: 'spring', bounce: 0.5 },
+              y:       { duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: 0.4 },
             }}
           >
-            <RizeFace size={100} accent={step.color} expression={step.expression} />
+            <RizeFace size={MASCOT} accent={step.color} expression={step.expression} />
           </motion.div>
         </AnimatePresence>
 
-        {/* Bottom text panel */}
-        <div className="absolute bottom-0 left-0 right-0 px-5 pb-10 pt-5" style={{ pointerEvents: 'auto' }}>
+        {/* Bottom panel */}
+        <div className="absolute bottom-0 left-0 right-0 px-5 pb-10 pt-6 bg-gradient-to-t from-black/95 via-black/85 to-transparent" style={{ pointerEvents: 'auto' }}>
 
           {/* Page tag + counter */}
-          <AnimatePresence mode="wait">
-            <motion.div key={`tag-${current}`} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="flex items-center justify-between mb-3">
-              <div className="rounded-full px-3.5 py-1.5 text-xs font-black border uppercase tracking-wider"
-                style={{ backgroundColor: step.color + '25', color: step.color, borderColor: step.color + '50' }}>
-                {step.tab} page
-              </div>
-              <span className="text-xs font-semibold text-white/40">{current + 1} / {STEPS.length}</span>
-            </motion.div>
-          </AnimatePresence>
+          <div className="flex items-center justify-between mb-3">
+            <div className="rounded-full px-3.5 py-1.5 text-xs font-black border uppercase tracking-wider"
+              style={{ backgroundColor: step.color + '25', color: step.color, borderColor: step.color + '50' }}>
+              {step.tab} page
+            </div>
+            <span className="text-xs font-semibold text-white/40">{current + 1} / {STEPS.length}</span>
+          </div>
 
           {/* Progress dots */}
           <div className="flex gap-1.5 mb-4">
@@ -518,18 +646,31 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
           {/* Buttons */}
           <div className="flex gap-3">
             {!isFirst && (
-              <button type="button" onClick={prev}
+              <button type="button" onClick={goPrev}
                 className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white active:scale-95 transition-transform">
                 <ArrowLeftIcon className="h-5 w-5" />
               </button>
             )}
-            <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={next}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-black"
-              style={{ backgroundColor: step.color, boxShadow: `0 8px 32px ${step.color}60` }}>
-              {isLast
-                ? <><CheckCircle2 className="h-5 w-5" /> Done — set my rank!</>
-                : <><ArrowRight className="h-5 w-5" /> Next</>}
-            </motion.button>
+            {isWaitingForUserAction ? (
+              <div
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold text-white/70 border border-white/15 bg-white/5"
+              >
+                <motion.span
+                  animate={{ opacity: [0.4, 1, 0.4] }}
+                  transition={{ duration: 1.4, repeat: Infinity }}
+                >
+                  {current === 4 ? 'Waiting for you to add a food…' : 'Tap the highlighted button to continue'}
+                </motion.span>
+              </div>
+            ) : (
+              <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={goNext}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-black"
+                style={{ backgroundColor: step.color, boxShadow: `0 8px 32px ${step.color}60` }}>
+                {isLast
+                  ? <><CheckCircle2 className="h-5 w-5" /> Done — set my rank!</>
+                  : <><ArrowRight className="h-5 w-5" /> Next</>}
+              </motion.button>
+            )}
           </div>
         </div>
       </motion.div>

@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, ArrowLeft as ArrowLeftIcon, X, CheckCircle2, Star, MousePointerClick } from 'lucide-react'
+import { ArrowRight, ArrowLeft as ArrowLeftIcon, X, CheckCircle2, Star, MousePointerClick, Sparkles } from 'lucide-react'
 import { useApp } from '@/lib/app-context'
 
-const STORAGE_KEY = 'rise-tutorial-v7-seen'
+const STORAGE_KEY = 'rise-tutorial-v8-seen'
 
 // ─── Mascot ───────────────────────────────────────────────────────────────────
 
@@ -75,13 +75,13 @@ function RizeFace({ size = 100, accent, expression = 'happy' }: {
 // ─── Confetti ─────────────────────────────────────────────────────────────────
 
 function Confetti() {
-  const pieces = Array.from({ length: 65 }, (_, i) => ({
+  const pieces = Array.from({ length: 80 }, (_, i) => ({
     id: i,
     x: Math.random() * 100,
     delay: Math.random() * 1.0,
-    duration: 1.5 + Math.random() * 1.5,
+    duration: 1.5 + Math.random() * 1.8,
     color: ['#84cc16','#f97316','#3b82f6','#f59e0b','#ec4899','#a78bfa','#06b6d4'][i % 7],
-    size: 5 + Math.random() * 11,
+    size: 5 + Math.random() * 12,
     rotate: Math.random() * 360,
     radius: [50, 2, 8][i % 3],
   }))
@@ -99,9 +99,7 @@ function Confetti() {
   )
 }
 
-// ─── DOM targeting helpers ────────────────────────────────────────────────────
-// We find live elements in the rendered app by walking the DOM. This way the
-// spotlight always lands EXACTLY on the real button, no hardcoded coordinates.
+// ─── DOM targeting ────────────────────────────────────────────────────────────
 
 type Finder = () => HTMLElement | null
 
@@ -116,29 +114,36 @@ const findByText = (selector: string, text: string, root: ParentNode = document)
 const findNavButton = (label: string): HTMLElement | null => {
   const nav = document.querySelector('nav')
   if (!nav) return null
-  return findByText('button', label, nav)
+  // Find the button whose <span> label matches exactly.
+  const buttons = Array.from(nav.querySelectorAll<HTMLElement>('button'))
+  return buttons.find(b => {
+    const span = b.querySelector('span')
+    return span && (span.textContent || '').trim().toLowerCase() === label.toLowerCase()
+  }) || findByText('button', label, nav)
 }
 
-// The Breakfast card's "Add" button: find the heading "Breakfast", walk up to
-// its card container, then find the Add button inside it.
 const findBreakfastAdd: Finder = () => {
   const headings = Array.from(document.querySelectorAll<HTMLElement>('h3'))
   const heading = headings.find(h => (h.textContent || '').trim().toLowerCase() === 'breakfast')
   if (!heading) return null
-  const card = heading.closest<HTMLElement>('div.rounded-2xl, [class*="rounded-2xl"]') || heading.parentElement?.parentElement?.parentElement
+  let card: HTMLElement | null = heading
+  for (let i = 0; i < 6 && card; i++) {
+    if (card.className && /rounded-2xl/.test(card.className)) break
+    card = card.parentElement
+  }
+  if (!card) card = heading.parentElement?.parentElement?.parentElement || null
   if (!card) return null
   return findByText('button', 'Add', card)
 }
 
 const findCoachFab: Finder = () => {
-  // RizeTip floating button — find a fixed-positioned button outside of <nav>
   const candidates = Array.from(document.querySelectorAll<HTMLElement>('button'))
   return candidates.find(b => {
     if (b.closest('nav')) return false
     const cs = getComputedStyle(b)
     if (cs.position !== 'fixed') return false
     const r = b.getBoundingClientRect()
-    return r.bottom > window.innerHeight - 220 && r.right > window.innerWidth - 160 && r.width < 200
+    return r.bottom > window.innerHeight - 220 && r.right > window.innerWidth - 160 && r.width < 200 && r.width > 30
   }) || null
 }
 
@@ -150,89 +155,79 @@ interface Step {
   title: string
   body: string
   expression: Expression
-  // DOM finder for the element to spotlight. null = no spotlight (centered card).
   find: Finder | null
-  // If true, the user MUST click the highlighted element to advance.
   requireClick?: boolean
-  // Optional: wait for this condition (polled) before advancing automatically.
-  waitFor?: () => boolean
-  // Where the mascot sits relative to the spotlight: 'above' | 'below' | 'left' | 'right'
-  mascotSide?: 'above' | 'below' | 'left' | 'right'
+  waitForMeal?: boolean
 }
 
 const STEPS: Step[] = [
   {
     tab: 'home', color: '#84cc16',
-    title: "Hey! I'm Rize — your coach!",
-    body: "I'll walk you through the app and help you log your first meal right now. Takes 30 seconds. Tap Next to start!",
+    title: "Hey! I'm Rize 👋",
+    body: "I'm your personal coach. Let me give you a quick 30-second tour and help you log your very first meal. Ready?",
     expression: 'excited',
     find: null,
   },
   {
     tab: 'home', color: '#84cc16',
     title: 'This is your Home base',
-    body: "Your name, streak and today's calories live here. You'll come back here every day. Now let's go log a meal — tap Next!",
-    expression: 'point_down',
+    body: "Your daily streak, calories, and shortcuts live here. You'll come back every day. Let's log a meal next!",
+    expression: 'happy',
     find: null,
   },
   {
     tab: 'home', color: '#f97316',
     title: 'Tap the FOOD button',
-    body: "See it highlighted at the bottom? Tap it now to open your meal log.",
+    body: "It's highlighted at the bottom of your screen. Tap it now — I'll wait!",
     expression: 'point_down',
     find: () => findNavButton('Food'),
     requireClick: true,
-    mascotSide: 'above',
   },
   {
     tab: 'food', color: '#f97316',
     title: 'Tap "+ Add" on Breakfast',
-    body: "This opens the food picker. Tap it now and pick anything — even a guess works for this tour!",
+    body: "This opens the food picker. Pick anything you ate — even a guess works for this tour.",
     expression: 'point_right',
     find: findBreakfastAdd,
     requireClick: true,
-    mascotSide: 'left',
   },
   {
     tab: 'food', color: '#f97316',
-    title: 'Pick any food to log it!',
-    body: "Search a food or choose from a category, then hit Add. I'll wait right here…",
+    title: 'Pick any food to log it',
+    body: "Search or browse a category, then hit Add. I'll wait right here…",
     expression: 'excited',
     find: null,
-    // Advance automatically the moment a meal entry exists.
-    waitFor: () => true, // handled specially in component via useApp
+    waitForMeal: true,
   },
   {
     tab: 'food', color: '#84cc16',
     title: "Boom — first meal logged! 🎉",
-    body: "That's it. Every meal works the same way. Now let me show you the rest real quick.",
+    body: "That's the whole flow. Every meal works the same way. Now let me show you the rest fast.",
     expression: 'excited',
     find: null,
   },
   {
     tab: 'home', color: '#3b82f6',
     title: 'TRAIN is for workouts',
-    body: "Tap the TRAIN button at the bottom-left to see how it works.",
+    body: "Tap TRAIN at the bottom-left to see your workout plan.",
     expression: 'point_down',
     find: () => findNavButton('Train'),
     requireClick: true,
-    mascotSide: 'above',
   },
   {
     tab: 'train', color: '#3b82f6',
-    title: 'Every day has a START button',
-    body: "Scroll down here and tap START on today's workout — I'll walk you through every set. Hit Next when you're ready.",
-    expression: 'point_down',
+    title: "Hit START on today's workout",
+    body: "Each day has a START button — tap it and I'll walk you through every set and rep. Hit Next when you've seen it.",
+    expression: 'happy',
     find: null,
   },
   {
     tab: 'ranks', color: '#f59e0b',
     title: 'RANKS shows your strength',
-    body: "Tap RANKS at the bottom to peek at your rank screen.",
+    body: "Tap the RANKS button to peek at your rank screen.",
     expression: 'point_down',
     find: () => findNavButton('Ranks'),
     requireClick: true,
-    mascotSide: 'above',
   },
   {
     tab: 'more', color: '#a78bfa',
@@ -241,19 +236,17 @@ const STEPS: Step[] = [
     expression: 'point_down',
     find: () => findNavButton('More'),
     requireClick: true,
-    mascotSide: 'above',
   },
   {
     tab: 'home', color: '#84cc16',
     title: 'Your AI Coach is one tap away',
-    body: "That floating button is me! Tap it any time for advice on food, training, or motivation. Hit Next to finish setup!",
+    body: "That floating button is me. Tap it any time for advice on food, training, or motivation. Hit Next to finish!",
     expression: 'point_right',
     find: findCoachFab,
-    mascotSide: 'left',
   },
 ]
 
-// ─── PR entry overlay (unchanged) ─────────────────────────────────────────────
+// ─── PR entry overlay ─────────────────────────────────────────────────────────
 
 const LIFTS = [
   { id: 'bench',    label: 'Bench Press (lbs)',  group: 'chest' as const, placeholder: 'e.g. 135' },
@@ -358,16 +351,22 @@ interface AppTutorialProps {
 
 interface Rect { top: number; left: number; width: number; height: number }
 
+const CARD_W = 340
+const CARD_GAP = 26 // distance between spotlight edge and coach card
+const SAFE_X = 14
+const SAFE_TOP = 60
+const SAFE_BOTTOM = 24
+
 export function AppTutorial({ onTabChange }: AppTutorialProps) {
   const { nutrition } = useApp()
   const [phase, setPhase] = useState<'tutorial' | 'pr' | 'done'>('done')
   const [current, setCurrent] = useState(0)
   const [dir, setDir] = useState(1)
   const [rect, setRect] = useState<Rect | null>(null)
+  const [viewport, setViewport] = useState({ w: 390, h: 844 })
   const targetRef = useRef<HTMLElement | null>(null)
   const clickHandlerRef = useRef<((e: Event) => void) | null>(null)
 
-  // Total meal entries — used to detect "user logged a meal" for the wait step.
   const totalEntries =
     nutrition.meals.breakfast.length +
     nutrition.meals.lunch.length +
@@ -377,6 +376,10 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
 
   useEffect(() => {
     try { if (!localStorage.getItem(STORAGE_KEY)) setPhase('tutorial') } catch {}
+    const updateVP = () => setViewport({ w: window.innerWidth, h: window.innerHeight })
+    updateVP()
+    window.addEventListener('resize', updateVP)
+    return () => window.removeEventListener('resize', updateVP)
   }, [])
 
   const goNext = useCallback(() => {
@@ -391,7 +394,6 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
     setCurrent(c => (c > 0 ? (setDir(-1), c - 1) : c))
   }, [])
 
-  // Detach any click handler attached to a previous target.
   const detachClick = useCallback(() => {
     if (targetRef.current && clickHandlerRef.current) {
       targetRef.current.removeEventListener('click', clickHandlerRef.current, true)
@@ -400,7 +402,7 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
     clickHandlerRef.current = null
   }, [])
 
-  // Effect: when step changes — switch tab, then poll for target, scroll into view, attach listeners.
+  // Step lifecycle: switch tab, find DOM target, scroll into view, attach click listener.
   useEffect(() => {
     if (phase !== 'tutorial') return
     const step = STEPS[current]
@@ -408,35 +410,34 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
     detachClick()
     setRect(null)
 
-    // Snapshot baseline entry count when entering the "pick a food" wait step.
-    if (current === 4) {
+    if (step.waitForMeal) {
       baselineEntriesRef.current = totalEntries
     }
 
     if (!step.find) {
-      // Centered card step (no DOM target). Scroll to top of page.
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
 
     let cancelled = false
     let pollCount = 0
-    let raf = 0
+    let pollTimer: ReturnType<typeof setTimeout> | null = null
 
     const lockOn = (el: HTMLElement) => {
       targetRef.current = el
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
-      // Wait for scroll to settle then measure
+      // Avoid scrolling for fixed-position elements (bottom nav, coach FAB).
+      const isFixed = getComputedStyle(el).position === 'fixed' || !!el.closest('nav')
+      if (!isFixed) el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+
       window.setTimeout(() => {
         if (cancelled) return
         const r = el.getBoundingClientRect()
         setRect({ top: r.top, left: r.left, width: r.width, height: r.height })
-      }, 450)
+      }, isFixed ? 60 : 450)
 
       if (step.requireClick) {
         const handler = () => {
-          // Defer a tick so the click's own state updates happen first.
-          window.setTimeout(() => goNext(), 50)
+          window.setTimeout(() => goNext(), 60)
         }
         clickHandlerRef.current = handler
         el.addEventListener('click', handler, true)
@@ -448,12 +449,11 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
       const el = step.find!()
       if (el) { lockOn(el); return }
       pollCount++
-      if (pollCount > 60) return // ~3s — give up and just show text
-      raf = window.setTimeout(poll, 50) as unknown as number
+      if (pollCount > 80) return
+      pollTimer = setTimeout(poll, 60)
     }
     poll()
 
-    // Re-measure on scroll/resize while the target is live.
     const remeasure = () => {
       if (!targetRef.current) return
       const r = targetRef.current.getBoundingClientRect()
@@ -464,7 +464,7 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
 
     return () => {
       cancelled = true
-      if (raf) clearTimeout(raf)
+      if (pollTimer) clearTimeout(pollTimer)
       window.removeEventListener('scroll', remeasure, true)
       window.removeEventListener('resize', remeasure)
       detachClick()
@@ -472,10 +472,10 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current, phase, onTabChange])
 
-  // Auto-advance from the "pick a food" step the moment a new entry is added.
+  // Auto-advance the "pick a food" step the moment a new meal entry is added.
   useEffect(() => {
     if (phase !== 'tutorial') return
-    if (current !== 4) return
+    if (!STEPS[current].waitForMeal) return
     if (totalEntries > baselineEntriesRef.current) {
       const t = window.setTimeout(() => goNext(), 350)
       return () => clearTimeout(t)
@@ -489,34 +489,9 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
     onTabChange('home')
   }
 
-  if (phase === 'pr') return <AnimatePresence><PREntryOverlay onComplete={finish} /></AnimatePresence>
-  if (phase !== 'tutorial') return null
+  // ─── Layout math: spotlight + card placement ───────────────────────────────
 
-  const step = STEPS[current]
-  const isFirst = current === 0
-  const isLast = current === STEPS.length - 1
-  const isWaitingForUserAction = !!step.requireClick || current === 4
-
-  // Compute mascot position from spotlight rect (with screen-edge padding).
-  const VW = typeof window !== 'undefined' ? window.innerWidth : 390
-  const VH = typeof window !== 'undefined' ? window.innerHeight : 844
-  const MASCOT = 90
-  let mascotStyle: React.CSSProperties = { left: '50%', top: '32%', transform: 'translate(-50%, -50%)' }
-  if (rect && step.find) {
-    const side = step.mascotSide || 'above'
-    const cx = rect.left + rect.width / 2
-    const cy = rect.top + rect.height / 2
-    let mx = cx, my = cy
-    const GAP = 70
-    if (side === 'above')  { my = Math.max(80, rect.top - GAP) }
-    if (side === 'below')  { my = Math.min(VH - 280, rect.top + rect.height + GAP) }
-    if (side === 'left')   { mx = Math.max(70, rect.left - GAP); my = cy }
-    if (side === 'right')  { mx = Math.min(VW - 70, rect.left + rect.width + GAP); my = cy }
-    mascotStyle = { left: mx, top: my, transform: 'translate(-50%, -50%)' }
-  }
-
-  // Spotlight rect (with a little padding) — px-based so it always tracks the real element.
-  const PAD = 8
+  const PAD = 10
   const spot = rect ? {
     top: rect.top - PAD,
     left: rect.left - PAD,
@@ -524,15 +499,70 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
     height: rect.height + PAD * 2,
   } : null
 
+  const placement = useMemo(() => {
+    const { w: VW, h: VH } = viewport
+    const cardW = Math.min(CARD_W, VW - SAFE_X * 2)
+    // Estimated card height — used to decide above vs below; real height auto.
+    const ESTIMATED_H = 250
+
+    if (!spot) {
+      // Centered card (welcome / celebration steps)
+      return {
+        cardLeft: (VW - cardW) / 2,
+        cardTop: Math.max(SAFE_TOP + 20, (VH - ESTIMATED_H) / 2 - 20),
+        cardW,
+        tail: null as null | { side: 'top' | 'bottom'; x: number },
+        anchorXY: { x: VW / 2, y: VH / 2 },
+      }
+    }
+
+    const cx = spot.left + spot.width / 2
+    const cy = spot.top + spot.height / 2
+
+    // Prefer placing the card on whichever side has more room.
+    const roomAbove = spot.top - SAFE_TOP
+    const roomBelow = VH - (spot.top + spot.height) - SAFE_BOTTOM
+    const placeAbove = roomAbove >= ESTIMATED_H + CARD_GAP || roomAbove > roomBelow
+
+    let cardTop: number
+    let tailSide: 'top' | 'bottom'
+    if (placeAbove) {
+      cardTop = Math.max(SAFE_TOP, spot.top - CARD_GAP - ESTIMATED_H)
+      tailSide = 'bottom' // tail on card's bottom edge, pointing down to spot
+    } else {
+      cardTop = Math.min(VH - SAFE_BOTTOM - ESTIMATED_H, spot.top + spot.height + CARD_GAP)
+      tailSide = 'top' // tail on top edge, pointing up to spot
+    }
+
+    let cardLeft = Math.max(SAFE_X, Math.min(VW - cardW - SAFE_X, cx - cardW / 2))
+    const tailX = Math.max(28, Math.min(cardW - 28, cx - cardLeft))
+
+    return {
+      cardLeft,
+      cardTop,
+      cardW,
+      tail: { side: tailSide, x: tailX },
+      anchorXY: { x: cx, y: cy },
+    }
+  }, [spot, viewport])
+
+  if (phase === 'pr') return <AnimatePresence><PREntryOverlay onComplete={finish} /></AnimatePresence>
+  if (phase !== 'tutorial') return null
+
+  const step = STEPS[current]
+  const isFirst = current === 0
+  const isLast = current === STEPS.length - 1
+  const isWaiting = !!step.requireClick || !!step.waitForMeal
+
   return (
     <AnimatePresence>
       <motion.div key="tut"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 overflow-hidden"
+        className="fixed inset-0 z-[60]"
         style={{ pointerEvents: 'none' }}>
 
-        {/* SVG dim layer with a hole punched over the spotlight so the target stays clickable */}
-        <svg className="absolute inset-0 h-full w-full" style={{ pointerEvents: 'none' }}>
+        {/* Dim layer with a real hole over the spotlight (SVG mask). Targets stay clickable. */}
+        <svg className="absolute inset-0 h-full w-full pointer-events-none">
           <defs>
             <mask id="rize-tut-mask">
               <rect width="100%" height="100%" fill="white" />
@@ -540,139 +570,253 @@ export function AppTutorial({ onTabChange }: AppTutorialProps) {
                 <rect
                   x={spot.left} y={spot.top}
                   width={spot.width} height={spot.height}
-                  rx={16} ry={16} fill="black"
+                  rx={18} ry={18} fill="black"
                 />
               )}
             </mask>
+            <radialGradient id="rize-tut-vignette" cx="50%" cy="50%" r="75%">
+              <stop offset="0%" stopColor="rgba(8,10,20,0.55)" />
+              <stop offset="100%" stopColor="rgba(0,0,0,0.92)" />
+            </radialGradient>
           </defs>
-          <rect width="100%" height="100%" fill="rgba(0,0,0,0.72)" mask="url(#rize-tut-mask)" />
+          <rect width="100%" height="100%" fill="url(#rize-tut-vignette)" mask="url(#rize-tut-mask)" />
         </svg>
 
-        {/* Skip */}
-        <div className="absolute top-0 left-0 right-0 flex justify-end px-5 pt-14" style={{ pointerEvents: 'auto' }}>
-          <button type="button" onClick={finish}
-            className="flex items-center gap-1.5 rounded-full bg-black/60 px-4 py-2 text-xs font-semibold text-white/70 border border-white/10">
-            Skip tour <X className="h-3 w-3" />
-          </button>
-        </div>
-
-        {/* Animated spotlight ring */}
+        {/* Animated color glow around spotlight */}
         {spot && (
-          <motion.div
-            key={`spot-${current}`}
-            initial={{ opacity: 0, scale: 1.15 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', damping: 20, stiffness: 280 }}
-            className="absolute pointer-events-none"
-            style={{
-              top: spot.top, left: spot.left, width: spot.width, height: spot.height,
-              borderRadius: 16,
-              border: `3px solid ${step.color}`,
-              boxShadow: `0 0 0 4px ${step.color}30, 0 0 40px 8px ${step.color}66`,
-            }}
-          />
+          <>
+            <motion.div
+              key={`glow-${current}`}
+              className="absolute pointer-events-none"
+              style={{
+                top: spot.top - 40, left: spot.left - 40,
+                width: spot.width + 80, height: spot.height + 80,
+                borderRadius: 999,
+                background: `radial-gradient(closest-side, ${step.color}55, transparent 70%)`,
+                filter: 'blur(8px)',
+              }}
+              animate={{ opacity: [0.55, 0.95, 0.55] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            {/* Crisp ring */}
+            <motion.div
+              key={`ring-${current}`}
+              initial={{ opacity: 0, scale: 1.15 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', damping: 18, stiffness: 260 }}
+              className="absolute pointer-events-none"
+              style={{
+                top: spot.top, left: spot.left, width: spot.width, height: spot.height,
+                borderRadius: 18,
+                border: `2.5px solid ${step.color}`,
+                boxShadow: `0 0 0 4px ${step.color}25, inset 0 0 0 1px rgba(255,255,255,0.18)`,
+              }}
+            />
+            {/* Expanding pulse ring */}
+            <motion.div
+              key={`pulse-${current}`}
+              className="absolute pointer-events-none"
+              style={{
+                top: spot.top, left: spot.left, width: spot.width, height: spot.height,
+                borderRadius: 18,
+                border: `2px solid ${step.color}`,
+              }}
+              animate={{ scale: [1, 1.18, 1], opacity: [0.7, 0, 0.7] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
+            />
+          </>
         )}
 
-        {/* Pulsing tap hint on click-required steps */}
+        {/* Tap hint on click-required steps */}
         {spot && step.requireClick && (
           <motion.div
             className="absolute pointer-events-none flex items-center justify-center"
             style={{
-              top: spot.top + spot.height / 2 - 18,
-              left: spot.left + spot.width / 2 - 18,
-              width: 36, height: 36,
+              top: spot.top + spot.height - 6,
+              left: spot.left + spot.width / 2 - 22,
+              width: 44, height: 44,
             }}
-            animate={{ scale: [1, 1.35, 1], opacity: [0.9, 0.4, 0.9] }}
-            transition={{ duration: 1.4, repeat: Infinity }}
+            animate={{ y: [0, 6, 0], opacity: [1, 0.6, 1] }}
+            transition={{ duration: 1.2, repeat: Infinity }}
           >
-            <MousePointerClick className="h-7 w-7" style={{ color: step.color }} />
+            <div
+              className="flex h-11 w-11 items-center justify-center rounded-full shadow-2xl"
+              style={{ backgroundColor: step.color, boxShadow: `0 8px 24px ${step.color}aa` }}
+            >
+              <MousePointerClick className="h-5 w-5 text-black" />
+            </div>
           </motion.div>
         )}
 
-        {/* Mascot — bounces near the highlighted element */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`mascot-${current}-${rect ? '1' : '0'}`}
-            className="absolute pointer-events-none z-[65]"
-            style={mascotStyle}
-            initial={{ opacity: 0, scale: 0.3 }}
-            animate={{ opacity: 1, scale: 1, y: [0, -8, 0] }}
-            exit={{ opacity: 0, scale: 0.3 }}
-            transition={{
-              opacity: { duration: 0.25 },
-              scale:   { duration: 0.45, type: 'spring', bounce: 0.5 },
-              y:       { duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: 0.4 },
-            }}
-          >
-            <RizeFace size={MASCOT} accent={step.color} expression={step.expression} />
-          </motion.div>
-        </AnimatePresence>
+        {/* Skip pill — top right */}
+        <div className="absolute top-0 right-0 px-4 pt-12" style={{ pointerEvents: 'auto' }}>
+          <button type="button" onClick={finish}
+            className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/70 px-3.5 py-2 text-[11px] font-semibold text-white/70 backdrop-blur-md hover:bg-black/85 transition-colors">
+            Skip tour <X className="h-3 w-3" />
+          </button>
+        </div>
 
-        {/* Bottom panel */}
-        <div className="absolute bottom-0 left-0 right-0 px-5 pb-10 pt-6 bg-gradient-to-t from-black/95 via-black/85 to-transparent" style={{ pointerEvents: 'auto' }}>
-
-          {/* Page tag + counter */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="rounded-full px-3.5 py-1.5 text-xs font-black border uppercase tracking-wider"
-              style={{ backgroundColor: step.color + '25', color: step.color, borderColor: step.color + '50' }}>
-              {step.tab} page
-            </div>
-            <span className="text-xs font-semibold text-white/40">{current + 1} / {STEPS.length}</span>
-          </div>
-
-          {/* Progress dots */}
-          <div className="flex gap-1.5 mb-4">
+        {/* Progress dots — top center */}
+        <div className="absolute top-0 left-0 right-0 flex justify-center pt-14 pointer-events-none">
+          <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/60 px-3 py-1.5 backdrop-blur-md">
             {STEPS.map((_, i) => (
               <motion.div key={i}
-                animate={{ width: i === current ? 24 : 5, opacity: i < current ? 0.45 : i === current ? 1 : 0.18 }}
-                transition={{ duration: 0.2 }}
+                animate={{
+                  width: i === current ? 22 : 5,
+                  opacity: i < current ? 0.55 : i === current ? 1 : 0.22,
+                  backgroundColor: i === current ? step.color : '#ffffff',
+                }}
+                transition={{ duration: 0.25 }}
                 className="h-1.5 rounded-full"
-                style={{ backgroundColor: i === current ? step.color : '#ffffff' }}
               />
             ))}
           </div>
-
-          {/* Sliding text */}
-          <AnimatePresence mode="wait">
-            <motion.div key={current}
-              initial={{ opacity: 0, x: dir * 32 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -32 }}
-              transition={{ type: 'spring', damping: 30, stiffness: 320 }}
-              className="mb-5">
-              <h2 className="text-xl font-black text-white leading-tight mb-2">{step.title}</h2>
-              <p className="text-[0.94rem] leading-relaxed" style={{ color: 'rgba(255,255,255,0.78)' }}>{step.body}</p>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Buttons */}
-          <div className="flex gap-3">
-            {!isFirst && (
-              <button type="button" onClick={goPrev}
-                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white active:scale-95 transition-transform">
-                <ArrowLeftIcon className="h-5 w-5" />
-              </button>
-            )}
-            {isWaitingForUserAction ? (
-              <div
-                className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold text-white/70 border border-white/15 bg-white/5"
-              >
-                <motion.span
-                  animate={{ opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 1.4, repeat: Infinity }}
-                >
-                  {current === 4 ? 'Waiting for you to add a food…' : 'Tap the highlighted button to continue'}
-                </motion.span>
-              </div>
-            ) : (
-              <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={goNext}
-                className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-black"
-                style={{ backgroundColor: step.color, boxShadow: `0 8px 32px ${step.color}60` }}>
-                {isLast
-                  ? <><CheckCircle2 className="h-5 w-5" /> Done — set my rank!</>
-                  : <><ArrowRight className="h-5 w-5" /> Next</>}
-              </motion.button>
-            )}
-          </div>
         </div>
+
+        {/* COACH CARD — floating, intelligently positioned, with mascot + speech tail */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`card-${current}`}
+            initial={{ opacity: 0, y: 14, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.96 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+            className="absolute"
+            style={{
+              left: placement.cardLeft,
+              top: placement.cardTop,
+              width: placement.cardW,
+              pointerEvents: 'auto',
+            }}
+          >
+            {/* Mascot floats above the card, peeking */}
+            <div className="relative">
+              <motion.div
+                className="absolute -top-[58px] left-4 z-10"
+                animate={{ y: [0, -6, 0], rotate: [-2, 2, -2] }}
+                transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <div
+                  className="rounded-full p-1"
+                  style={{
+                    background: `radial-gradient(circle, ${step.color}55, transparent 70%)`,
+                    filter: 'blur(0.5px)',
+                  }}
+                >
+                  <RizeFace size={68} accent={step.color} expression={step.expression} />
+                </div>
+              </motion.div>
+
+              {/* Tag chip top-right of card */}
+              <div className="absolute -top-3 right-3 z-10">
+                <div
+                  className="flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-lg"
+                  style={{
+                    backgroundColor: step.color,
+                    color: '#0a0a0a',
+                    borderColor: 'rgba(255,255,255,0.4)',
+                    boxShadow: `0 4px 16px ${step.color}66`,
+                  }}
+                >
+                  <Sparkles className="h-2.5 w-2.5" />
+                  {step.tab}
+                </div>
+              </div>
+
+              {/* Card body — glass with colored border */}
+              <div
+                className="relative rounded-3xl border bg-zinc-950/95 px-5 pb-5 pt-9 shadow-2xl backdrop-blur-xl overflow-hidden"
+                style={{
+                  borderColor: `${step.color}55`,
+                  boxShadow: `0 20px 60px -10px rgba(0,0,0,0.7), 0 0 0 1px ${step.color}22, 0 0 40px -10px ${step.color}55`,
+                }}
+              >
+                {/* Color wash at top of card */}
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-0 h-24 opacity-30"
+                  style={{ background: `radial-gradient(120% 100% at 30% 0%, ${step.color}, transparent 65%)` }}
+                />
+
+                {/* Step counter */}
+                <div className="relative mb-1.5 flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: step.color }}>
+                    Step {current + 1} of {STEPS.length}
+                  </span>
+                </div>
+
+                {/* Sliding text */}
+                <AnimatePresence mode="wait">
+                  <motion.div key={current}
+                    initial={{ opacity: 0, x: dir * 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: dir * -20 }}
+                    transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                    className="relative mb-4"
+                  >
+                    <h2 className="text-[1.05rem] font-black leading-tight text-white mb-1.5">{step.title}</h2>
+                    <p className="text-[0.85rem] leading-relaxed text-white/72">{step.body}</p>
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Action row */}
+                <div className="relative flex gap-2">
+                  {!isFirst && (
+                    <button type="button" onClick={goPrev}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/80 transition-transform active:scale-95">
+                      <ArrowLeftIcon className="h-4 w-4" />
+                    </button>
+                  )}
+                  {isWaiting ? (
+                    <div
+                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-[12px] font-bold text-white/70"
+                    >
+                      <motion.span
+                        className="inline-flex h-1.5 w-1.5 rounded-full"
+                        style={{ backgroundColor: step.color }}
+                        animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.3, 0.8] }}
+                        transition={{ duration: 1.2, repeat: Infinity }}
+                      />
+                      {step.waitForMeal ? 'Waiting for you to add a food…' : 'Tap the highlighted button'}
+                    </div>
+                  ) : (
+                    <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={goNext}
+                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-[14px] font-black text-black"
+                      style={{
+                        backgroundColor: step.color,
+                        boxShadow: `0 8px 24px ${step.color}55, inset 0 1px 0 rgba(255,255,255,0.35)`,
+                      }}
+                    >
+                      {isLast
+                        ? <><CheckCircle2 className="h-4 w-4" /> Done — set my rank!</>
+                        : <><ArrowRight className="h-4 w-4" /> Got it, next</>}
+                    </motion.button>
+                  )}
+                </div>
+              </div>
+
+              {/* Speech-bubble tail pointing toward the spotlight */}
+              {placement.tail && (
+                <div
+                  className="absolute"
+                  style={{
+                    left: placement.tail.x - 10,
+                    [placement.tail.side === 'bottom' ? 'bottom' : 'top']: -9,
+                    width: 20, height: 12,
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <svg viewBox="0 0 20 12" className="h-full w-full">
+                    {placement.tail.side === 'bottom' ? (
+                      <path d="M0 0 L20 0 L10 12 Z" fill="#09090b" stroke={`${step.color}55`} strokeWidth="1" />
+                    ) : (
+                      <path d="M0 12 L20 12 L10 0 Z" fill="#09090b" stroke={`${step.color}55`} strokeWidth="1" />
+                    )}
+                  </svg>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </motion.div>
     </AnimatePresence>
   )

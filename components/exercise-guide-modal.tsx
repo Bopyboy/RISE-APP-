@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { X, ChevronDown, ChevronUp, Zap, AlertTriangle, Wind, Star } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { X, ChevronDown, ChevronUp, Zap, AlertTriangle, Wind, Star, Play, Pause } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getExerciseGuide } from '@/lib/exercise-guides'
 import { getExerciseImageUrl } from '@/lib/exercise-media'
@@ -18,28 +18,136 @@ const DIFFICULTY_COLORS = {
   Advanced: 'text-red-400 bg-red-400/10 border-red-400/20',
 }
 
+/**
+ * Animated exercise demonstration.
+ *
+ * The free-exercise-db ships every movement with two reference frames:
+ *   /0.jpg  → start position
+ *   /1.jpg  → end position
+ *
+ * We crossfade between them on a loop, which gives a true motion preview
+ * for EVERY exercise without needing a hand-authored gif/video per move.
+ *
+ * Speed is tuned per movement type (compound lifts slower, cardio faster).
+ */
 function ExerciseAnimation({ name }: { name: string }) {
-  const url = getExerciseImageUrl(name)
-  const [failed, setFailed] = useState(false)
+  const baseUrl = getExerciseImageUrl(name)
+  const [failed0, setFailed0] = useState(false)
+  const [failed1, setFailed1] = useState(false)
+  const [frame, setFrame] = useState<0 | 1>(0)
+  const [playing, setPlaying] = useState(true)
 
-  if (!url || failed) {
+  // Pick a tempo per movement family.
+  const lower = name.toLowerCase()
+  const tempoMs = (() => {
+    if (/(jump rope|mountain climbers|hiit|battle ropes|sprint|cycling|treadmill|rowing|elliptical|stair)/.test(lower)) return 380
+    if (/(curl|raise|fly|pushdown|extension|shrug|calf|crunch|twist|plank|dead bug)/.test(lower)) return 750
+    if (/(deadlift|squat|bench|press|row|pull-up|pullup|chin)/.test(lower)) return 950
+    return 850
+  })()
+
+  useEffect(() => {
+    if (!playing) return
+    const id = window.setInterval(() => {
+      setFrame(prev => (prev === 0 ? 1 : 0))
+    }, tempoMs)
+    return () => window.clearInterval(id)
+  }, [playing, tempoMs])
+
+  if (!baseUrl) {
     return (
       <div className="rounded-2xl border border-border bg-secondary/30 aspect-video flex items-center justify-center">
-        <p className="text-xs text-muted-foreground">No exercise image available</p>
+        <p className="text-xs text-muted-foreground">No exercise animation available</p>
       </div>
     )
   }
 
+  const url0 = baseUrl
+  const url1 = baseUrl.replace(/\/0\.jpg(\?.*)?$/, '/1.jpg$1')
+
+  // If both frames fail, show fallback.
+  if (failed0 && failed1) {
+    return (
+      <div className="rounded-2xl border border-border bg-secondary/30 aspect-video flex items-center justify-center">
+        <p className="text-xs text-muted-foreground">No exercise animation available</p>
+      </div>
+    )
+  }
+
+  // If frame 1 failed but frame 0 still loads, fall back to a static preview
+  // so we never show a broken/blank image while "animating".
+  const onlyHasFrame0 = failed1 && !failed0
+
   return (
-    <div className="rounded-2xl overflow-hidden border border-border bg-card aspect-video relative">
+    <div className="rounded-2xl overflow-hidden border border-border bg-card aspect-video relative group">
+      {/* Frame 0 */}
       <img
-        src={url}
-        alt={`${name} exercise demonstration`}
-        onError={() => setFailed(true)}
-        className="w-full h-full object-cover"
+        src={url0}
+        alt={`${name} — start position`}
+        onError={() => setFailed0(true)}
+        className={cn(
+          'absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ease-in-out will-change-[opacity]',
+          onlyHasFrame0 ? 'opacity-100' : frame === 0 ? 'opacity-100' : 'opacity-0',
+        )}
+        draggable={false}
       />
-      <span className="absolute bottom-1.5 right-2 text-[9px] text-black/40 font-medium">
-        exercise reference
+      {/* Frame 1 */}
+      {!onlyHasFrame0 && (
+        <img
+          src={url1}
+          alt={`${name} — end position`}
+          onError={() => setFailed1(true)}
+          className={cn(
+            'absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ease-in-out will-change-[opacity]',
+            frame === 1 ? 'opacity-100' : 'opacity-0',
+          )}
+          draggable={false}
+        />
+      )}
+
+      {/* Subtle motion overlay so it always feels alive */}
+      <div
+        className={cn(
+          'pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent',
+        )}
+      />
+
+      {/* Phase indicator */}
+      {!onlyHasFrame0 && (
+        <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur px-2 py-0.5">
+          <span
+            className={cn(
+              'h-1.5 w-1.5 rounded-full transition-colors',
+              frame === 0 ? 'bg-primary' : 'bg-white/30',
+            )}
+          />
+          <span
+            className={cn(
+              'h-1.5 w-1.5 rounded-full transition-colors',
+              frame === 1 ? 'bg-primary' : 'bg-white/30',
+            )}
+          />
+          <span className="text-[10px] font-semibold text-white/90 ml-0.5">
+            {frame === 0 ? 'START' : 'END'}
+          </span>
+        </div>
+      )}
+
+      {/* Play/pause */}
+      {!onlyHasFrame0 && (
+        <button
+          type="button"
+          onClick={() => setPlaying(p => !p)}
+          aria-label={playing ? 'Pause animation' : 'Play animation'}
+          className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/55 backdrop-blur px-2.5 py-1 text-white/90 text-[10px] font-semibold hover:bg-black/70 transition-colors"
+        >
+          {playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+          {playing ? 'Pause' : 'Play'}
+        </button>
+      )}
+
+      <span className="absolute bottom-1.5 left-2 text-[9px] text-white/60 font-medium">
+        animated reference
       </span>
     </div>
   )
